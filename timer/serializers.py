@@ -6,6 +6,7 @@ from organisation_details.models import Organisation
 from login_details.models import User
 from services.models import IssueCategory, IssueType
 from solution_groups.models import SolutionGroup
+from roles_creation.models import UserRole
  
 
 class AttachmentSerializer(serializers.ModelSerializer):
@@ -14,105 +15,6 @@ class AttachmentSerializer(serializers.ModelSerializer):
         fields = ['id', 'file', 'uploaded_at']
 
  
-# class TicketSerializer(serializers.ModelSerializer):
-#     # Manually define service_domain and service_type fields
-#     service_domain = serializers.CharField(source='service_domain.name', default="Application Support", read_only=True)
-#     service_type = serializers.CharField(source='service_type.name', default="SAP", read_only=True)
-   
-#     # Simplified attachments field
-#     attachments = serializers.SerializerMethodField()
-   
-#     class Meta:
-#         model = Ticket
-#         fields = "__all__"
-#         extra_kwargs = {
-#             'created_by': {'read_only': True},
-#             'modified_by': {'read_only': True},
-#         }
-   
-#     def get_attachments(self, obj):
-#         """Return only the file paths for attachments without id and uploaded_at"""
-#         file_paths = []
-#         for attachment in obj.attachments.all():
-#             if attachment.file:
-#                 file_paths.append(attachment.file.url)
-#         return file_paths
-   
-#     def to_representation(self, instance):
-#         """Customize serialized output to return human-readable labels."""
-#         representation = super().to_representation(instance)
-       
-#         # Safely handle service_domain and service_type
-#         if "service_domain" in representation and representation["service_domain"] is None:
-#             representation["service_domain"] = "Application Support"
-       
-#         if "service_type" in representation and representation["service_type"] is None:
-#             representation["service_type"] = "SAP"
-       
-#         # Add human-readable values for choice fields
-#         if "impact" in representation:
-#             representation["impact"] = instance.get_impact_display()
-        
-#         if "support_team" in representation:
-#             representation["support_team"] = instance.get_support_team_display()
-        
-#         if "status" in representation:
-#             representation["status"] = instance.get_status_display()
-        
-#         # Handle ForeignKey relationships safely
-#         if hasattr(instance, 'solution_grp') and instance.solution_grp:
-#             representation["solution_grp"] = instance.solution_grp.group_name
-        
-#         if hasattr(instance, 'developer_organization') and instance.developer_organization:
-#             representation["developer_organization"] = instance.developer_organization.organisation_name
-        
-#         if hasattr(instance, 'priority') and instance.priority:
-#             representation["priority"] = instance.priority.urgency_name
-        
-#         if hasattr(instance, 'created_by') and instance.created_by:
-#             representation["created_by"] = instance.created_by.username
-        
-#         if hasattr(instance, 'modified_by') and instance.modified_by:
-#             representation["modified_by"] = instance.modified_by.username
-        
-#         if hasattr(instance, 'assignee') and instance.assignee:
-#             representation["assignee"] = instance.assignee.username
-       
-#         # Remove attachments_list if it exists (to avoid duplication)
-#         if "attachments_list" in representation:
-#             del representation["attachments_list"]
-           
-#         return representation
-   
-#     def validate_developer_organization(self, value):
-#         from .models import Organisation
-#         if isinstance(value, str):
-#             try:
-#                 org = Organisation.objects.get(organisation_name=value)
-#                 return org.pk
-#             except Organisation.DoesNotExist:
-#                 raise serializers.ValidationError(f'Organisation "{value}" does not exist.')
-#         return value
-   
-#     def validate_assignee(self, value):
-#         from .models import User
-#         if isinstance(value, str):
-#             try:
-#                 user = User.objects.get(username=value)
-#                 return user.pk
-#             except User.DoesNotExist:
-#                 raise serializers.ValidationError(f'User "{value}" does not exist.')
-#         return value
-   
-#     def validate_solution_grp(self, value):
-#         from .models import SolutionGroup
-#         if isinstance(value, str):
-#             try:
-#                 group = SolutionGroup.objects.get(group_name__iexact=value)
-#                 return group.pk
-#             except SolutionGroup.DoesNotExist:
-#                 raise serializers.ValidationError(f'Solution group "{value}" does not exist.')
-#         return value
  
     
 class TicketSerializer(serializers.ModelSerializer):
@@ -124,17 +26,11 @@ class TicketSerializer(serializers.ModelSerializer):
         queryset=IssueType.objects.all(),
         error_messages={'does_not_exist': 'Service type does not exist.'}
     )
-    assignee = serializers.SlugRelatedField(
 
-    queryset=User.objects.all(),
-
-    slug_field='username',
-
-    required=False,
-
-    allow_null=True
-
-    )
+    assignee = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    assignee_role = serializers.SerializerMethodField()
+ 
+ 
     
     developer_organization = serializers.SlugRelatedField(
 
@@ -159,28 +55,8 @@ class TicketSerializer(serializers.ModelSerializer):
         allow_null=True
 
     )
-    # project = serializers.PrimaryKeyRelatedField(
-
-    #     queryset=ProjectsDetails.objects.all(),
-
-    #     required=False,
-
-    #     allow_null=True
-
-    # )
-
-    # product = serializers.CharField(
-
-    #     required=False,
-
-    #     allow_blank=True,
-
-    #     allow_null=True
-
-    # )
-
+    project_owner_email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
  
-
  
     attachments = serializers.SerializerMethodField()
  
@@ -193,10 +69,15 @@ class TicketSerializer(serializers.ModelSerializer):
         }
 
     def validate_assignee(self, value):
-        """Custom validation for the assignee field."""
-        if value and not User.objects.filter(username=value).exists():
+        if value and not User.objects.filter(id=value.id).exists():
             raise serializers.ValidationError("Assignee does not exist.")
         return value
+    
+    def get_assignee_role(self, obj):
+        role = UserRole.objects.filter(user=obj.assignee, is_active=True).first()
+        return role.role.name if role else None
+ 
+ 
  
     def get_attachments(self, obj):
         """Return only the file URLs for attachments."""
@@ -220,8 +101,22 @@ class TicketSerializer(serializers.ModelSerializer):
         representation["impact"] = instance.get_impact_display()
         representation["support_team"] = instance.get_support_team_display()
         representation["status"] = instance.get_status_display()
+        if instance.assignee:
+            is_dispatcher = UserRole.objects.filter(user=instance.assignee, role__name="Dispatcher", is_active=True).exists()
+            representation["assignee"] = "Dispatcher" if is_dispatcher else instance.assignee.username
+        else:
+            representation["assignee"] = None
+ 
  
         return representation
+    
+    def create(self, validated_data):
+        project = validated_data.get("project", None)
+        if project:
+            validated_data["project_owner_email"] = project.product_mail
+        return super().create(validated_data)
+   
+ 
  
     
 class AssignTicketSerializer(serializers.ModelSerializer):

@@ -15,6 +15,7 @@ from solution_groups.models import SolutionGroup
 from priority.models import Priority
 from login_details.models import User
 import random,string
+from project_details.models import ProjectsDetails
 
 
 
@@ -82,8 +83,7 @@ class Ticket(models.Model):
     #     Organisation, on_delete=models.CASCADE, related_name="organisation_tickets"
     # )
     is_active = models.BooleanField(default=False)
-    project = models.CharField(max_length=50)
-    product = models.CharField(max_length=30)
+    
     #resolution_steps = models.TextField(blank=True, null=True)
     customer_country = models.CharField(max_length=50, blank=True, null=True)
     ticket_id = models.CharField(
@@ -92,6 +92,9 @@ class Ticket(models.Model):
     summary = models.CharField(max_length=250)
     description = models.TextField()
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='open')
+    project = models.ForeignKey(ProjectsDetails, null=True, blank=True, on_delete=models.SET_NULL)
+    project_owner_email = models.EmailField(null=True, blank=True)# Optio
+ 
 
     priority = models.ForeignKey(Priority, on_delete=models.SET_NULL,related_name="priority",null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

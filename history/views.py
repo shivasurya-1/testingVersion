@@ -10,8 +10,7 @@ from datetime import timedelta
 from roles_creation.permissions import HasRolePermission
 from .serializers import TicketHistorySerializer,ReportSerializer,AttachmentSerializer
 from .models import History,Reports,Attachment
-
-
+from timer.models import Ticket
 
 class HistoryAPI(APIView):
     permission_classes = [IsAuthenticated]
@@ -78,16 +77,35 @@ class AttachmentsAPI(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
-    def get(self, request):
-        # self.permission_required = "view_employee"  
-        # HasRolePermission.has_permission(self,request,self.permission_required)
+    # def get(self, request):
+    #     # self.permission_required = "view_employee"  
+    #     # HasRolePermission.has_permission(self,request,self.permission_required)
        
-        if 1:
-            ticket=request.query_params.get('ticket')
-            print(ticket)
-            report = Attachment.objects.filter(ticket=ticket)
-            serializer = AttachmentSerializer(report, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-          return Response({"error": "Invalid request."}, status=status.HTTP_400_BAD_REQUEST)
+    #     if 1:
+    #         ticket=request.query_params.get('ticket')
+    #         print(ticket)
+    #         report = Attachment.objects.filter(ticket=ticket)
+    #         serializer = AttachmentSerializer(report, many=True)
+    #         return Response(serializer.data, status=status.HTTP_200_OK)
+    #     else:
+    #       return Response({"error": "Invalid request."}, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        ticket_id = request.query_params.get("ticket_id")
+        user = request.user
+ 
+        try:
+            ticket = Ticket.objects.get(ticket_id=ticket_id)
+        except Ticket.DoesNotExist:
+            return Response({"error": "Ticket not found"}, status=404)
+ 
+        if ticket.created_by_id == user.id or ticket.assignee_id == user.id:
+            attachments = Attachment.objects.filter(ticket=ticket)
+            serializer = AttachmentSerializer(attachments, many=True)
+            return Response(serializer.data)
+ 
+        return Response({"detail": "You do not have permission to view these attachments."}, status=403)
+ 
+ 
+ 
     
