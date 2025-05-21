@@ -574,48 +574,7 @@ class dispatcherAPIView(APIView):
             })
  
         return Response({"detail": "No tickets or invalid role."}, status=status.HTTP_400_BAD_REQUEST)
- 
-    # def put(self, request, *args, **kwargs):
-    #         self.permission_required = "create_ticket"
-    #         ticket_id = request.data.get("ticket_id")
-    
-    #         if not ticket_id:
-    #             return Response({"error": "Ticket ID is required for update."}, status=status.HTTP_400_BAD_REQUEST)
-    
-    #         try:
-    #             ticket = Ticket.objects.get(ticket_id=ticket_id)
-    #         except Ticket.DoesNotExist:
-    #             return Response({"error": "Ticket not found."}, status=status.HTTP_404_NOT_FOUND)
-    
-    #         data = request.data.copy()
-    #         incoming_assignee = data.get("assignee")
-    #         print(f"➡️ Incoming Assignee ID from request: {incoming_assignee}")
-    
-    #         if incoming_assignee:
-    #             try:
-    #                 assignee_user = User.objects.get(id=incoming_assignee)
-    #                 print(f"🧾 Assignee Found: {assignee_user.username} (ID: {assignee_user.id})")
-    #             except User.DoesNotExist:
-    #                 return Response({"error": "Invalid assignee."}, status=400)
-    #         elif not ticket.assignee:
-    #             dispatcher = UserRole.objects.filter(role__name="Dispatcher", is_active=True).first()
-    #             if dispatcher:
-    #                 data["assignee"] = dispatcher.user.id
-    #                 send_auto_assignment_email_to_dispatcher.delay(ticket.ticket_id, dispatcher.user.email)
-    #                 print(f"🛠️ Auto-assigned to dispatcher: {dispatcher.user.username} (ID: {dispatcher.user.id})")
-    #             else:
-    #                 return Response({"error": "No active dispatcher available for automatic assignment."}, status=400)
-    
-    #         serializer = TicketSerializer(ticket, data=data, partial=True)
-    
-    #         if serializer.is_valid():
-    #             updated_ticket = serializer.save(modified_by=request.user)
-    #             return Response({
-    #                 "message": "Ticket updated successfully",
-    #                 "ticket_id": updated_ticket.ticket_id
-    #             }, status=status.HTTP_200_OK)
-    #         else:
-    #             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def put(self, request, *args, **kwargs):
         self.permission_required = "create_ticket"
         ticket_id = request.data.get("ticket_id")
