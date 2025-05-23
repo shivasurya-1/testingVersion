@@ -15,11 +15,11 @@ import {
   X,
 } from "lucide-react";
 
-const navItems = [
-  { name: "My Actions", path: "/actions" },
-  { name: "Helpful Links", path: "/links" },
-  { name: "Other Portals", path: "/portals" },
-];
+// const navItems = [
+//   { name: "My Actions", path: "/actions" },
+//   { name: "Helpful Links", path: "/links" },
+//   { name: "Other Portals", path: "/portals" },
+// ];
 
 const Navbar = ({ isLoading = false }) => {
   const dispatch = useDispatch();
@@ -95,40 +95,34 @@ const Navbar = ({ isLoading = false }) => {
       )}
 
       <header className="w-full shadow-sm bg-white">
-        <div className="container mx-auto">
+        {/* Use full width container without max-width constraints */}
+        <div className="w-full">
           <nav className="px-4 py-2">
-            <div className="flex items-center justify-between">
-              {/* Logo */}
-              <Link
-                to="/"
-                className="text-2xl font-bold text-blue-800 hover:text-blue-600 transition-colors flex items-center"
-                onClick={() => !isLoading && handleNavItemClick("Home")}
-              >
-                <span className="bg-blue-600 text-white px-2 py-0.5 rounded-md mr-1">
-                  Nx
-                </span>
-                <span className="text-blue-600">Desk</span>
-              </Link>
+            {/* Use justify-between to push logo to left edge and profile to right edge */}
+            <div className="flex items-center justify-between w-full">
+              {/* Logo - stays at left edge */}
+              <div className="flex-shrink-0">
+                <Link
+                  to="/"
+                  className="text-2xl font-bold text-blue-800 hover:text-blue-600 transition-colors flex items-center"
+                  onClick={() => !isLoading && handleNavItemClick("Home")}
+                >
+                  <span className="bg-blue-600 text-white px-2 py-0.5 rounded-md mr-1">
+                    Nx
+                  </span>
+                  <span className="text-blue-600">Desk</span>
+                </Link>
+              </div>
 
-              {/* Mobile menu button */}
-              <button
-                className="md:hidden mobile-menu-button p-1 rounded-md hover:bg-blue-50 focus:outline-none"
-                onClick={toggleMobileMenu}
-                disabled={isLoading}
-              >
-                {isMenuOpen ? (
-                  <X className="w-5 h-5 text-gray-600" />
-                ) : (
-                  <Menu className="w-5 h-5 text-gray-600" />
-                )}
-              </button>
-              {/* <ul className="flex space-x-1">
-                {navItems.map((item) => (
-                  <li key={item.path}>
-                    <Link
-                      to={item.path}
-                      onClick={() => handleNavItemClick(item)}
-                      className={`
+              {/* Center Navigation Items - Hidden on mobile */}
+              {/* <div className="hidden md:flex flex-1 justify-center">
+                <ul className="flex space-x-1">
+                  {navItems.map((item) => (
+                    <li key={item.path}>
+                      <Link
+                        to={item.path}
+                        onClick={() => handleNavItemClick(item)}
+                        className={`
                           px-3 py-1.5 rounded-md transition-all text-sm font-medium
                           ${
                             activePage === item.name
@@ -136,18 +130,31 @@ const Navbar = ({ isLoading = false }) => {
                               : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                           }
                         `}
-                    >
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul> */}
-              {/* Navigation and Profile Section */}
-              <div className="hidden md:flex items-center justify-between space-x-4">
-                {/* Navigation Items */}
+                      >
+                        {item.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div> */}
 
-                {/* Profile Section */}
-                <div className="relative" ref={dropdownRef}>
+              {/* Right side - Profile and Mobile Menu Button */}
+              <div className="flex items-center space-x-2">
+                {/* Mobile menu button */}
+                <button
+                  className="md:hidden mobile-menu-button p-1 rounded-md hover:bg-blue-50 focus:outline-none"
+                  onClick={toggleMobileMenu}
+                  disabled={isLoading}
+                >
+                  {isMenuOpen ? (
+                    <X className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <Menu className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+
+                {/* Profile Section - stays at right edge */}
+                <div className="relative flex-shrink-0" ref={dropdownRef}>
                   <div
                     className="flex items-center space-x-2 cursor-pointer p-1.5 rounded-lg hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100"
                     onClick={toggleProfileDropdown}
@@ -211,18 +218,6 @@ const Navbar = ({ isLoading = false }) => {
                           <User className="w-3.5 h-3.5 mr-2 text-blue-500" />
                           Your Profile
                         </div>
-                        {/* <div
-                          className="px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 cursor-pointer flex items-center"
-                          onClick={() => {
-                            if (!isLoading) {
-                              navigate("/settings");
-                              setIsProfileDropdownOpen(false);
-                            }
-                          }}
-                        >
-                          <Settings className="w-3.5 h-3.5 mr-2 text-blue-500" />
-                          Settings
-                        </div> */}
                         <div className="border-t border-gray-50 my-1"></div>
                         <div
                           className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 cursor-pointer flex items-center"
@@ -239,6 +234,7 @@ const Navbar = ({ isLoading = false }) => {
             </div>
           </nav>
 
+          {/* Mobile Menu */}
           {/* {isMenuOpen && (
             <div
               className="md:hidden bg-white py-2 border-t border-blue-50 rounded-b-lg"

@@ -38,7 +38,7 @@ function Sidebar() {
 
   // Track open sections
   const [openSections, setOpenSections] = useState({
-    // dashboard: true,
+    dashboard: false,
     incidents: true,
     configuration: false,
     // resources: false,
@@ -66,7 +66,7 @@ function Sidebar() {
   // Configure which links are disabled (all enabled by default)
   const [disabledLinks, setDisabledLinks] = useState({
     // Set to true to disable specific links
-    // dashboard: true,
+    dashboard: false,
     incidents: false,
     createIncident: false,
     reportIssue: false,
@@ -147,20 +147,20 @@ function Sidebar() {
 
   // Organize sidebar items into logical groups
   const sidebarGroups = [
-    // {
-    //   id: "dashboard",
-    //   title: "Dashboard",
-    //   showForRoles: ["all"], // Show for all roles
-    //   items: [
-    //     {
-    //       id: "dashboard",
-    //       name: "Dashboard",
-    //       route: "/request-issue/application-support/request-issue/application-support/Dashborad",
-    //       icon: <LayoutDashboard size={16} />,
-    //       showForRoles: ["all"] // Show for all roles
-    //     },
-    //   ],
-    // },
+    {
+      id: "dashboard",
+      title: "Dashboard",
+      showForRoles: ["all"], // Show for all roles
+      items: [
+        {
+          id: "dashboard",
+          name: "Dashboard",
+          route: "/request-issue/application-support/request-issue/application-support/Dashborad",
+          icon: <LayoutDashboard size={16} />,
+          showForRoles: ["all"] // Show for all roles
+        },
+      ],
+    },
     {
       id: "incidents",
       title: "Ticket Management",
