@@ -177,94 +177,94 @@ export default function CreateIssue() {
     // Reset the file input so the same file can be selected again
     e.target.value = "";
   };
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-  const sendMessage = async () => {
-    if (!newMessage.trim() && attachments.length === 0) return;
+  // const handleKeyPress = (e) => {
+  //   if (e.key === "Enter" && !e.shiftKey) {
+  //     e.preventDefault();
+  //     sendMessage();
+  //   }
+  // };
+  // const sendMessage = async () => {
+  //   if (!newMessage.trim() && attachments.length === 0) return;
 
-    try {
-      const accessToken = localStorage.getItem("access_token");
-      if (!accessToken) {
-        toast.error("Access token missing. Please log in.");
-        return;
-      }
+  //   try {
+  //     const accessToken = localStorage.getItem("access_token");
+  //     if (!accessToken) {
+  //       toast.error("Access token missing. Please log in.");
+  //       return;
+  //     }
 
-      // First, upload any local files
-      let uploadedAttachments = [];
-      for (const attachment of attachments) {
-        if (attachment.isLocal) {
-          const fileFormData = new FormData();
-          fileFormData.append("attachments", attachment.file);
-          fileFormData.append("ticket", formData.number);
-          fileFormData.append("title", newMessage || "Attachment Added");
-          console.log("FormData", fileFormData);
-          const response = await axiosInstance.post(
-            "/ticket/reports/",
-            fileFormData,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "Content-Type": "multipart/form-data",
-              },
-            }
-          );
+  //     // First, upload any local files
+  //     let uploadedAttachments = [];
+  //     for (const attachment of attachments) {
+  //       if (attachment.isLocal) {
+  //         const fileFormData = new FormData();
+  //         fileFormData.append("attachments", attachment.file);
+  //         fileFormData.append("ticket", formData.number);
+  //           fileFormData.append("title", newMessage || "Attachment Added");
+  //         console.log("Attachments FormData", fileFormData);
+  //         const response = await axiosInstance.post(
+  //           "/ticket/reports/",
+  //           fileFormData,
+  //           {
+  //             headers: {
+  //               Authorization: `Bearer ${accessToken}`,
+  //               "Content-Type": "multipart/form-data",
+  //             },
+  //           }
+  //         );
 
-          // Assuming the response contains the uploaded file details
-          const uploadedFile = response.data;
-          uploadedAttachments.push({
-            id: uploadedFile.id,
-            name: attachment.name,
-            type: attachment.type,
-            url: uploadedFile.file_url,
-          });
-        } else {
-          uploadedAttachments.push(attachment); // Already uploaded files
-        }
-      }
+  //         // Assuming the response contains the uploaded file details
+  //         const uploadedFile = response.data;
+  //         uploadedAttachments.push({
+  //           id: uploadedFile.id,
+  //           name: attachment.name,
+  //           type: attachment.type,
+  //           url: uploadedFile.file_url,
+  //         });
+  //       } else {
+  //         uploadedAttachments.push(attachment); // Already uploaded files
+  //       }
+  //     }
 
-      // Create array of attachment IDs for the API request
-      const attachmentIds = uploadedAttachments
-        .map((att) => att.id)
-        .filter((id) => typeof id === "number");
+  //     // Create array of attachment IDs for the API request
+  //     const attachmentIds = uploadedAttachments
+  //       .map((att) => att.id)
+  //       .filter((id) => typeof id === "number");
 
-      // Add message to UI immediately for responsive feeling
-      const tempMessage = {
-        id: `temp-${Date.now()}`,
-        text: newMessage,
-        timestamp: "Sending...",
-        isCurrentUser: true,
-        user: userProfile.first_name || "You",
-        attachments: [...uploadedAttachments],
-      };
+  //     // Add message to UI immediately for responsive feeling
+  //     const tempMessage = {
+  //       id: `temp-${Date.now()}`,
+  //       text: newMessage,
+  //       timestamp: "Sending...",
+  //       isCurrentUser: true,
+  //       user: userProfile.first_name || "You",
+  //       attachments: [...uploadedAttachments],
+  //     };
 
-      setMessages((prev) => [...prev, tempMessage]);
+  //     setMessages((prev) => [...prev, tempMessage]);
 
-      setNewMessage("");
-      setAttachments([]);
+  //     setNewMessage("");
+  //     setAttachments([]);
 
-      // Revoke object URLs to prevent memory leaks
-      attachments.forEach((att) => {
-        if (att.previewUrl && att.previewUrl.startsWith("blob:")) {
-          URL.revokeObjectURL(att.previewUrl);
-        }
-      });
+  //     // Revoke object URLs to prevent memory leaks
+  //     attachments.forEach((att) => {
+  //       if (att.previewUrl && att.previewUrl.startsWith("blob:")) {
+  //         URL.revokeObjectURL(att.previewUrl);
+  //       }
+  //     });
 
-      // Refresh messages to ensure we have the latest data
-      fetchMessages(formData.number);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Failed to send message and attachments");
+  //     // Refresh messages to ensure we have the latest data
+  //     fetchMessages(formData.number);
+  //   } catch (error) {
+  //     console.error("Error sending message:", error);
+  //     toast.error("Failed to send message and attachments");
 
-      // Remove the temp message if sending failed
-      setMessages((prev) =>
-        prev.filter((msg) => msg.id !== `temp-${Date.now()}`)
-      );
-    }
-  };
+  //     // Remove the temp message if sending failed
+  //     setMessages((prev) =>
+  //       prev.filter((msg) => msg.id !== `temp-${Date.now()}`)
+  //     );
+  //   }
+  // };
   // Fetch ticket notes data
   const fetchTicketNotes = async (ticketId) => {
     setNotesLoading(true);
@@ -370,39 +370,39 @@ export default function CreateIssue() {
   };
 
   // Add a new note
-  const addNote = async () => {
-    if (!newNote.trim()) return;
+  // const addNote = async () => {
+  //   if (!newNote.trim()) return;
 
-    try {
-      const accessToken = localStorage.getItem("access_token");
-      if (!accessToken) {
-        toast.error("Access token missing. Please log in.");
-        return;
-      }
+  //   try {
+  //     const accessToken = localStorage.getItem("access_token");
+  //     if (!accessToken) {
+  //       toast.error("Access token missing. Please log in.");
+  //       return;
+  //     }
 
-      // Call the API to add a new note
-      const response = await axiosInstance.post(
-        "/ticket/reports/",
-        {
-          title: newNote,
-          ticket: formData.number,
-        },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
+  //     // Call the API to add a new note
+  //     const response = await axiosInstance.post(
+  //       "/ticket/reports/",
+  //       {
+  //         title: newNote,
+  //         ticket: formData.number,
+  //       },
+  //       { headers: { Authorization: `Bearer ${accessToken}` } }
+  //     );
 
-      // Add to local state for immediate UI update
-      setTicketNotes([response.data, ...ticketNotes]);
+  //     // Add to local state for immediate UI update
+  //     setTicketNotes([response.data, ...ticketNotes]);
 
-      // Clear the input field
-      setNewNote("");
+  //     // Clear the input field
+  //     setNewNote("");
 
-      // Refresh the notes to ensure we have the latest data
-      fetchTicketNotes(formData.number);
-    } catch (error) {
-      console.error("Error adding note:", error);
-      toast.error("Failed to add note");
-    }
-  };
+  //     // Refresh the notes to ensure we have the latest data
+  //     fetchTicketNotes(formData.number);
+  //   } catch (error) {
+  //     console.error("Error adding note:", error);
+  //     toast.error("Failed to add note");
+  //   }
+  // };
 
   // Handle resolution
   const handleResolve = async (e) => {
@@ -629,6 +629,8 @@ export default function CreateIssue() {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  console.log("Attachments", attachments);
+
   const handleChange = useCallback(
     (e) => {
       const { name, value } = e.target;
@@ -710,6 +712,7 @@ export default function CreateIssue() {
       contact_mode: data.contactMode,
       created_by: data.requestor,
       is_active: isActive,
+      attachments: attachments,
     };
   };
 
@@ -790,10 +793,15 @@ export default function CreateIssue() {
       const response = await axiosInstance.post(
         "/ticket/create/",
         convertFormDataToSnakeCase(formData),
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
-      sendMessage();
-      console.log("Ticket Created", convertFormDataToSnakeCase(formData));
+      // sendMessage();
+      console.log("Converted Form Data", convertFormDataToSnakeCase(formData));
 
       toast.success(`Ticket ${response.data.ticket_id} raised successfully`);
       // setTimeout(() => {
@@ -836,7 +844,7 @@ export default function CreateIssue() {
           // Customize messages based on field
           if (field === "summary") {
             toast.error("Summary should not contain more than 250 characters.");
-          }  else {
+          } else {
             // Fallback for unexpected fields
             toast.error(`${field}: ${message}`);
           }
@@ -1106,7 +1114,6 @@ export default function CreateIssue() {
               </div>
               {/* {formData.assignmentType === "manual" && (
                 <> */}
-              
 
               <div className="flex items-center">
                 <label className="w-44 text-gray-600 text-right pr-2">

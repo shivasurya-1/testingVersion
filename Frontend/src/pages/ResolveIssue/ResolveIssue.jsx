@@ -70,6 +70,7 @@ export default function ResolveIssue() {
         );
         console.log("Ticket Details", response);
         setTicket(response.data);
+        setAttachments(response.data.attachments || []);
         setQuestionData((prev) => ({
           ...prev,
           ticket: response.data.ticket_id,
@@ -115,33 +116,33 @@ export default function ResolveIssue() {
   }, []);
 
   // Fetch attachments
-  useEffect(() => {
-    const fetchAttachments = async () => {
-      if (!ticketId || !ticket) return;
+  // useEffect(() => {
+  //   const fetchAttachments = async () => {
+  //     if (!ticketId || !ticket) return;
 
-      try {
-        const response = await axiosInstance.get("ticket/attachments/", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
-          params: { ticket: ticketId },
-        });
+  //     try {
+  //       const response = await axiosInstance.get("ticket/attachments/", {
+  //         headers: {
+  //           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+  //         },
+  //         params: { ticket_id: ticketId },
+  //       });
 
-        // Filter attachments for the current ticket
-        const ticketAttachments = response.data.filter(
-          (attachment) => attachment.ticket === ticket.ticket_id
-        );
+  //       // Filter attachments for the current ticket
+  //       const ticketAttachments = response.data.filter(
+  //         (attachment) => attachment.ticket === ticket.ticket_id
+  //       );
 
-        setAttachments(ticketAttachments);
-      } catch (error) {
-        console.error("Error fetching attachments:", error);
-      }
-    };
+  //       setAttachments(ticketAttachments);
+  //     } catch (error) {
+  //       console.error("Error fetching attachments:", error);
+  //     }
+  //   };
 
-    if (ticket) {
-      fetchAttachments();
-    }
-  }, [ticket, ticketId]);
+  //   if (ticket) {
+  //     fetchAttachments();
+  //   }
+  // }, [ticket, ticketId]);
 
   // Scroll to content when tab changes
   useEffect(() => {
@@ -465,7 +466,7 @@ export default function ResolveIssue() {
             {currentTab === "Notes" && (
               <ChatUI ref={chatUIRef} ticketId={ticket?.ticket_id} />
             )}
-
+            {/* 
             {currentTab === "RelatedRecords" && (
               <div className="p-2">
                 <div>
@@ -474,7 +475,7 @@ export default function ResolveIssue() {
                   </div>
 
                   <div className="border ">
-                    {/* Attachments Table */}
+                    
                     <table className="w-full">
                       <thead className="bg-gray-100">
                         <tr>
@@ -488,13 +489,12 @@ export default function ResolveIssue() {
                       <tbody>
                         {attachments && attachments.length > 0 ? (
                           attachments.map((attachment) => {
-                            // Construct the correct backend URL
-                            // Extract just the path portion from the file_url
+                    
                             const urlPath = attachment.file_url.replace(
                               /^https?:\/\/[^\/]+/,
                               ""
                             );
-                            // Construct the correct backend URL
+                          
                             const backendUrl =
                               process.env.REACT_APP_API_BASE_URL ||
                               "http://localhost:8000";
@@ -538,6 +538,178 @@ export default function ResolveIssue() {
                                     >
                                       Download
                                     </a>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan="3"
+                              className="p-4 text-center text-gray-500"
+                            >
+                              No attachments found for this ticket
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )} */}
+            {currentTab === "RelatedRecords" && (
+              <div className="p-2">
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-medium text-lg">Attachments</h3>
+                  </div>
+
+                  <div className="border">
+                    {/* Attachments Table */}
+                    <table className="w-full">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="border-b p-2 text-left">File</th>
+                          <th className="border-b p-2 text-left">
+                            Uploaded At
+                          </th>
+                          <th className="border-b p-2 text-left">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {attachments && attachments.length > 0 ? (
+                          attachments.map((attachment) => {
+                            // Extract filename from the file path
+                            const fileName = attachment.file.split("/").pop();
+                            const fileExtension = fileName
+                              .split(".")
+                              .pop()
+                              ?.toLowerCase();
+
+                            // Define file type categories
+                            const imageExtensions = [
+                              "jpg",
+                              "jpeg",
+                              "png",
+                              "gif",
+                              "bmp",
+                              "webp",
+                              "svg",
+                              "ico",
+                            ];
+                            const previewableDocuments = [
+                              "pdf",
+                              "txt",
+                              "html",
+                              "htm",
+                              "json",
+                              "xml",
+                              "css",
+                              "js",
+                              "md",
+                            ];
+                            const nonPreviewableFiles = [
+                              "docx",
+                              "doc",
+                              "xlsx",
+                              "xls",
+                              "pptx",
+                              "ppt",
+                              "zip",
+                              "rar",
+                              "7z",
+                              "tar",
+                              "gz",
+                              "exe",
+                              "dmg",
+                              "apk",
+                              "deb",
+                              "rpm",
+                            ];
+
+                            // Determine file type
+                            const isImage =
+                              imageExtensions.includes(fileExtension);
+                            const isPreviewableDocument =
+                              previewableDocuments.includes(fileExtension);
+                            const isNonPreviewable =
+                              nonPreviewableFiles.includes(fileExtension);
+
+                            // Construct the correct backend URL
+                            const backendUrl =
+                              process.env.REACT_APP_API_BASE_URL ||
+                              "http://localhost:8000";
+                            const fullUrl = `${backendUrl}${attachment.file}`;
+
+                            return (
+                              <tr
+                                key={attachment.id}
+                                className="hover:bg-gray-50"
+                              >
+                                <td className="border-b p-2">
+                                  <div className="flex items-center">
+                                    <Paperclip
+                                      size={16}
+                                      className="mr-2 text-gray-500"
+                                    />
+                                    <span className="text-gray-700">
+                                      {fileName}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="border-b p-2">
+                                  {new Date(
+                                    attachment.uploaded_at
+                                  ).toLocaleString()}
+                                </td>
+                                <td className="border-b p-2">
+                                  <div className="flex space-x-2">
+                                    {/* Images: Only View (no download) */}
+                                    {isImage && (
+                                      <a
+                                        href={fullUrl}
+                                        className="text-blue-500 hover:underline"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                      >
+                                        View
+                                      </a>
+                                    )}
+
+                                    {/* Previewable Documents: Both View and Download */}
+                                    {isPreviewableDocument && (
+                                      <>
+                                        <a
+                                          href={fullUrl}
+                                          className="text-blue-500 hover:underline"
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        >
+                                          View
+                                        </a>
+                                        <a
+                                          href={fullUrl}
+                                          className="text-blue-500 hover:underline"
+                                          download={fileName}
+                                        >
+                                          Download
+                                        </a>
+                                      </>
+                                    )}
+
+                                    {/* Non-previewable Files: Only Download */}
+                                    {(isNonPreviewable ||
+                                      (!isImage && !isPreviewableDocument)) && (
+                                      <a
+                                        href={fullUrl}
+                                        className="text-blue-500 hover:underline"
+                                        download={fileName}
+                                      >
+                                        Download
+                                      </a>
+                                    )}
                                   </div>
                                 </td>
                               </tr>

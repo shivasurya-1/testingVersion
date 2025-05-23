@@ -8,13 +8,20 @@ from services.models import IssueCategory, IssueType
 from solution_groups.models import SolutionGroup
 from roles_creation.models import UserRole
  
-
 class AttachmentSerializer(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField()
+
     class Meta:
         model = Attachment
         fields = ['id', 'file', 'uploaded_at']
 
- 
+    def get_file(self, obj):
+        request = self.context.get('request')
+        if obj.file:
+            url = obj.file.url  # make sure to access .url here
+            return request.build_absolute_uri(url) if request else url
+        return None
+    
  
     
 class TicketSerializer(serializers.ModelSerializer):
@@ -77,12 +84,12 @@ class TicketSerializer(serializers.ModelSerializer):
         role = UserRole.objects.filter(user=obj.assignee, is_active=True).first()
         return role.role.name if role else None
  
- 
- 
+    
     def get_attachments(self, obj):
-        """Return only the file URLs for attachments."""
-        return [attachment.file.url for attachment in obj.attachments.all() if attachment.file]
- 
+            """Return full attachment objects using AttachmentSerializer."""
+            request = self.context.get('request')
+            return AttachmentSerializer(obj.attachments.all(), many=True, context={'request': request}).data
+    
     def to_representation(self, instance):
         """Customize serialized output to return human-readable labels."""
         representation = super().to_representation(instance)

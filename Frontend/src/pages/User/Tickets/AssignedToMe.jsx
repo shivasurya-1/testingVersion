@@ -1,5 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Paperclip, Clock, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  Paperclip,
+  Clock,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import Sidebar from "../../../components/Sidebar";
 import ChatbotPopup from "../../../components/ChatBot";
 import ReactPaginate from "react-paginate";
@@ -17,7 +24,9 @@ export default function AssignedToMe() {
     key: "created_at",
     direction: "desc",
   });
-  const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleTimeString());
+  const [lastUpdated, setLastUpdated] = useState(
+    new Date().toLocaleTimeString()
+  );
 
   const userProfile = useSelector((state) => state.userProfile.user);
 
@@ -28,16 +37,16 @@ export default function AssignedToMe() {
     }
 
     const searchLower = searchTerm.toLowerCase().trim();
-    
+
     return allTickets.filter((ticket) => {
       // Search in multiple fields
-      const ticketId = (ticket.ticket_id || '').toString().toLowerCase();
-      const summary = (ticket.summary || '').toLowerCase();
-      const issueType = (ticket.issue_type || '').toLowerCase();
-      const status = (ticket.status || '').toLowerCase();
-      const priority = (ticket.priority || '').toLowerCase();
-      const product = (ticket.product || '').toLowerCase();
-      
+      const ticketId = (ticket.ticket_id || "").toString().toLowerCase();
+      const summary = (ticket.summary || "").toLowerCase();
+      const issueType = (ticket.issue_type || "").toLowerCase();
+      const status = (ticket.status || "").toLowerCase();
+      const priority = (ticket.priority || "").toLowerCase();
+      const product = (ticket.product || "").toLowerCase();
+
       return (
         ticketId.includes(searchLower) ||
         summary.includes(searchLower) ||
@@ -60,24 +69,24 @@ export default function AssignedToMe() {
       let bValue = b[sortConfig.key];
 
       // Handle null/undefined values
-      if (aValue === null || aValue === undefined) aValue = '';
-      if (bValue === null || bValue === undefined) bValue = '';
+      if (aValue === null || aValue === undefined) aValue = "";
+      if (bValue === null || bValue === undefined) bValue = "";
 
       // Convert to strings for comparison
       aValue = aValue.toString().toLowerCase();
       bValue = bValue.toString().toLowerCase();
 
       // Special handling for dates
-      if (sortConfig.key === 'created_at') {
+      if (sortConfig.key === "created_at") {
         aValue = new Date(a[sortConfig.key] || 0);
         bValue = new Date(b[sortConfig.key] || 0);
       }
 
       if (aValue < bValue) {
-        return sortConfig.direction === 'asc' ? -1 : 1;
+        return sortConfig.direction === "asc" ? -1 : 1;
       }
       if (aValue > bValue) {
-        return sortConfig.direction === 'asc' ? 1 : -1;
+        return sortConfig.direction === "asc" ? 1 : -1;
       }
       return 0;
     });
@@ -94,7 +103,7 @@ export default function AssignedToMe() {
   const totalEntries = filteredTickets.length;
   const currentEntries = {
     start: totalEntries > 0 ? currentPage * pageSize + 1 : 0,
-    end: Math.min((currentPage + 1) * pageSize, totalEntries)
+    end: Math.min((currentPage + 1) * pageSize, totalEntries),
   };
   const pageCount = Math.max(1, Math.ceil(totalEntries / pageSize));
 
@@ -135,7 +144,10 @@ export default function AssignedToMe() {
 
       console.log("API Response:", response.data);
 
-      const tickets = response.data.results?.all_tickets || response.data.results?.all_ticket || [];
+      const tickets =
+        response.data.results?.all_tickets ||
+        response.data.results?.all_ticket ||
+        [];
 
       if (!Array.isArray(tickets)) {
         throw new Error("Invalid data format: expected an array of tickets");
@@ -145,7 +157,10 @@ export default function AssignedToMe() {
       setLastUpdated(new Date().toLocaleTimeString());
       setLoading(false);
     } catch (err) {
-      console.error("Error fetching tickets:", err.response ? err.response.data : err.message);
+      console.error(
+        "Error fetching tickets:",
+        err.response ? err.response.data : err.message
+      );
       setAllTickets([]);
       setLoading(false);
     }
@@ -153,7 +168,8 @@ export default function AssignedToMe() {
 
   const requestSort = (key) => {
     let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
+    if (sortConfig.key === key && sortConfig.direction === "asc")
+      direction = "desc";
     setSortConfig({ key, direction });
   };
 
@@ -177,7 +193,7 @@ export default function AssignedToMe() {
 
   // Status colors only for status column
   const getStatusColor = (status) => {
-    const statusLower = status?.toLowerCase() || '';
+    const statusLower = status?.toLowerCase() || "";
     switch (statusLower) {
       case "open":
         return "bg-blue-100 text-blue-800";
@@ -211,11 +227,14 @@ export default function AssignedToMe() {
 
   // Filter functions with null checks - now using filteredTickets for accurate counts
   const getOpenTickets = () => {
-    return filteredTickets.filter((t) => t.status?.toLowerCase() === "open").length;
+    return filteredTickets.filter((t) => t.status?.toLowerCase() === "open")
+      .length;
   };
 
   const getInProgressTickets = () => {
-    return filteredTickets.filter((t) => t.status?.toLowerCase() === "working in progress").length;
+    return filteredTickets.filter(
+      (t) => t.status?.toLowerCase() === "working in progress"
+    ).length;
   };
 
   return (
@@ -226,12 +245,17 @@ export default function AssignedToMe() {
           {/* Compact Header */}
           <div className="flex justify-between items-center border-b border-gray-200 pb-2 mb-2">
             <div>
-              <h3 className="text-lg font-semibold text-gray-800">Tickets Assigned To Me</h3>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Tickets Assigned To Me
+              </h3>
             </div>
             <div className="flex items-center gap-2">
               <button
                 className="px-3 py-1 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700 transition-colors"
-                onClick={() => window.location.href = "/request-issue/application-support/sap/create-issue"}
+                onClick={() =>
+                  (window.location.href =
+                    "/request-issue/application-support/sap/create-issue")
+                }
               >
                 New Ticket
               </button>
@@ -257,7 +281,8 @@ export default function AssignedToMe() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex gap-3 text-xs font-medium">
               <span className="px-2 py-1 bg-white border rounded shadow-sm">
-                Total: {totalEntries}{searchTerm && " (filtered)"}
+                Total: {totalEntries}
+                {searchTerm && " (filtered)"}
               </span>
               <span className="px-2 py-1 bg-white border rounded shadow-sm">
                 Open: {getOpenTickets()}
@@ -305,182 +330,195 @@ export default function AssignedToMe() {
               </div>
             </div>
           ) : (
-<div className="flex flex-col bg-white border rounded overflow-hidden">
-  {paginatedTickets.length > 0 ? (
-    <>
-      {/* Table with proper sizing - no flex-1 to prevent stretching */}
-      <div className="overflow-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50 sticky top-0">
-            <tr>
-              <th className="w-4 px-2 py-1.5"></th>
-              <th
-                className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
-                onClick={() => requestSort("ticket_id")}
-              >
-                <div className="flex items-center gap-1">
-                  ID
-                  {sortConfig.key === "ticket_id" && (
-                    <span className="text-xs">{sortConfig.direction === "asc" ? "▲" : "▼"}</span>
-                  )}
-                </div>
-              </th>
-              <th
-                className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
-                onClick={() => requestSort("summary")}
-              >
-                <div className="flex items-center gap-1">
-                  Summary
-                  {sortConfig.key === "summary" && (
-                    <span className="text-xs">{sortConfig.direction === "asc" ? "▲" : "▼"}</span>
-                  )}
-                </div>
-              </th>
-              <th
-                className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
-                onClick={() => requestSort("status")}
-              >
-                <div className="flex items-center gap-1">
-                  Status
-                  {sortConfig.key === "status" && (
-                    <span className="text-xs">{sortConfig.direction === "asc" ? "▲" : "▼"}</span>
-                  )}
-                </div>
-              </th>
-              <th
-                className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
-                onClick={() => requestSort("priority")}
-              >
-                <div className="flex items-center gap-1">
-                  Priority
-                  {sortConfig.key === "priority" && (
-                    <span className="text-xs">{sortConfig.direction === "asc" ? "▲" : "▼"}</span>
-                  )}
-                </div>
-              </th>
-              <th
-                className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
-                onClick={() => requestSort("created_at")}
-              >
-                <div className="flex items-center gap-1">
-                  Created
-                  {sortConfig.key === "created_at" && (
-                    <span className="text-xs">{sortConfig.direction === "asc" ? "▲" : "▼"}</span>
-                  )}
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedTickets.map((ticket, index) => (
-              <tr
-                key={ticket.ticket_id || index}
-                className={`hover:bg-gray-50 cursor-pointer transition-colors text-xs ${
-                  index % 2 === 1 ? "bg-gray-25" : ""
-                }`}
-                onClick={() => handleTicketClick(ticket.ticket_id)}
-              >
-                <td className="w-4 px-2 py-1.5">
-                  <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center text-blue-500">
-                    <span className="text-xs">i</span>
+            <div className="flex flex-col bg-white border rounded overflow-hidden">
+              {paginatedTickets.length > 0 ? (
+                <>
+                  {/* Table with proper sizing - no flex-1 to prevent stretching */}
+                  <div className="overflow-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="w-4 px-2 py-1.5"></th>
+                          <th
+                            className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
+                            onClick={() => requestSort("ticket_id")}
+                          >
+                            <div className="flex items-center gap-1">
+                              ID
+                              {sortConfig.key === "ticket_id" && (
+                                <span className="text-xs">
+                                  {sortConfig.direction === "asc" ? "▲" : "▼"}
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
+                            onClick={() => requestSort("summary")}
+                          >
+                            <div className="flex items-center gap-1">
+                              Summary
+                              {sortConfig.key === "summary" && (
+                                <span className="text-xs">
+                                  {sortConfig.direction === "asc" ? "▲" : "▼"}
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
+                            onClick={() => requestSort("status")}
+                          >
+                            <div className="flex items-center gap-1">
+                              Status
+                              {sortConfig.key === "status" && (
+                                <span className="text-xs">
+                                  {sortConfig.direction === "asc" ? "▲" : "▼"}
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
+                            onClick={() => requestSort("priority")}
+                          >
+                            <div className="flex items-center gap-1">
+                              Priority
+                              {sortConfig.key === "priority" && (
+                                <span className="text-xs">
+                                  {sortConfig.direction === "asc" ? "▲" : "▼"}
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
+                            onClick={() => requestSort("created_at")}
+                          >
+                            <div className="flex items-center gap-1">
+                              Created
+                              {sortConfig.key === "created_at" && (
+                                <span className="text-xs">
+                                  {sortConfig.direction === "asc" ? "▲" : "▼"}
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {paginatedTickets.map((ticket, index) => (
+                          <tr
+                            key={ticket.ticket_id || index}
+                            className={`hover:bg-gray-50 cursor-pointer transition-colors text-xs ${
+                              index % 2 === 1 ? "bg-gray-25" : ""
+                            }`}
+                            onClick={() => handleTicketClick(ticket.ticket_id)}
+                          >
+                            <td className="w-4 px-2 py-1.5">
+                              <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center text-blue-500">
+                                <span className="text-xs">i</span>
+                              </div>
+                            </td>
+                            <td className="px-2 py-1.5 font-medium text-blue-600">
+                              {ticket.ticket_id || "N/A"}
+                            </td>
+                            <td className="px-2 py-1.5 font-medium max-w-xs">
+                              <div className="truncate" title={ticket.summary}>
+                                {ticket.summary || "N/A"}
+                              </div>
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                                  ticket.status
+                                )}`}
+                              >
+                                {ticket.status || "N/A"}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1.5 font-medium">
+                              {ticket.priority || "N/A"}
+                            </td>
+                            <td className="px-2 py-1.5">
+                              {formatDate(ticket.created_at)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                </td>
-                <td className="px-2 py-1.5 font-medium text-blue-600">
-                  {ticket.ticket_id || 'N/A'}
-                </td>
-                <td className="px-2 py-1.5 font-medium max-w-xs">
-                  <div className="truncate" title={ticket.summary}>
-                    {ticket.summary || 'N/A'}
-                  </div>
-                </td>
-                <td className="px-2 py-1.5">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}
-                  >
-                    {ticket.status || 'N/A'}
-                  </span>
-                </td>
-                <td className="px-2 py-1.5 font-medium">
-                  {ticket.priority || 'N/A'}
-                </td>
-                <td className="px-2 py-1.5">
-                  {formatDate(ticket.created_at)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
 
-      {/* Pagination Footer - now directly follows table content */}
-      {totalEntries > 0 && (
-        <div className="flex justify-between items-center p-2 border-t bg-gray-50 text-xs">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <label htmlFor="pageSize">Per page:</label>
-              <select
-                id="pageSize"
-                value={pageSize}
-                onChange={handlePageSizeChange}
-                className="border rounded px-1 py-0.5 text-xs"
-              >
-                <option value="2">2</option>
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="15">15</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
-            </div>
-            <span>
-              {totalEntries <= pageSize 
-                ? `Showing all ${totalEntries} ${totalEntries === 1 ? 'entry' : 'entries'}`
-                : `${currentEntries.start}-${currentEntries.end} of ${totalEntries}`
-              }
-            </span>
-          </div>
+                  {/* Pagination Footer - now directly follows table content */}
+                  {totalEntries > 0 && (
+                    <div className="flex justify-between items-center p-2 border-t bg-gray-50 text-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <label htmlFor="pageSize">Per page:</label>
+                          <select
+                            id="pageSize"
+                            value={pageSize}
+                            onChange={handlePageSizeChange}
+                            className="border rounded px-1 py-0.5 text-xs"
+                          >
+                            <option value="2">2</option>
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                          </select>
+                        </div>
+                        <span>
+                          {totalEntries <= pageSize
+                            ? `Showing all ${totalEntries} ${
+                                totalEntries === 1 ? "entry" : "entries"
+                              }`
+                            : `${currentEntries.start}-${currentEntries.end} of ${totalEntries}`}
+                        </span>
+                      </div>
 
-          {/* Only show pagination controls if there are multiple pages */}
-          {pageCount > 1 && (
-            <ReactPaginate
-              previousLabel={<ChevronLeft size={12} />}
-              nextLabel={<ChevronRight size={12} />}
-              breakLabel={"..."}
-              pageCount={pageCount}
-              marginPagesDisplayed={1}
-              pageRangeDisplayed={2}
-              onPageChange={handlePageClick}
-              forcePage={currentPage}
-              containerClassName="flex space-x-1"
-              pageClassName="px-2 py-1 border rounded bg-white cursor-pointer hover:bg-gray-100 text-xs"
-              activeClassName="bg-blue-500 text-black border-blue-500"
-              previousClassName="px-1 py-1 border rounded bg-white cursor-pointer hover:bg-gray-100"
-              nextClassName="px-1 py-1 border rounded bg-white cursor-pointer hover:bg-gray-100"
-              disabledClassName="opacity-50 cursor-not-allowed"
-              breakClassName="px-2 py-1"
-            />
-          )}
-        </div>
-      )}
-    </>
-  ) : (
-    <div className="flex items-center justify-center text-gray-500 text-sm p-8">
-      {searchTerm ? (
-        <div className="text-center">
-          <p>No tickets match "{searchTerm}"</p>
-          <button
-            onClick={() => setSearchTerm("")}
-            className="mt-1 text-blue-600 hover:text-blue-800 text-xs underline"
-          >
-            Clear search
-          </button>
-        </div>
-      ) : (
-        "No tickets found"
-      )}
-    </div>
-  )}
+                      {/* Only show pagination controls if there are multiple pages */}
+                      {pageCount > 1 && (
+                        <ReactPaginate
+                          previousLabel={<ChevronLeft size={12} />}
+                          nextLabel={<ChevronRight size={12} />}
+                          breakLabel={"..."}
+                          pageCount={pageCount}
+                          marginPagesDisplayed={1}
+                          pageRangeDisplayed={2}
+                          onPageChange={handlePageClick}
+                          forcePage={currentPage}
+                          containerClassName="flex space-x-1"
+                          pageClassName="px-2 py-1 border rounded bg-white cursor-pointer hover:bg-gray-100 text-xs"
+                          activeClassName="bg-blue-500 text-black border-blue-500"
+                          previousClassName="px-1 py-1 border rounded bg-white cursor-pointer hover:bg-gray-100"
+                          nextClassName="px-1 py-1 border rounded bg-white cursor-pointer hover:bg-gray-100"
+                          disabledClassName="opacity-50 cursor-not-allowed"
+                          breakClassName="px-2 py-1"
+                        />
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-center text-gray-500 text-sm p-8">
+                  {searchTerm ? (
+                    <div className="text-center">
+                      <p>No tickets match "{searchTerm}"</p>
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className="mt-1 text-blue-600 hover:text-blue-800 text-xs underline"
+                      >
+                        Clear search
+                      </button>
+                    </div>
+                  ) : (
+                    "No tickets found"
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
