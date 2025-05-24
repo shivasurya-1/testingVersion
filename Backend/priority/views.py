@@ -9,13 +9,37 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from datetime import timedelta
 from roles_creation.permissions import HasRolePermission
 import re
+from django.shortcuts import render, get_object_or_404
+from organisation_details.models import Organisation as organisation
 
+# from organisation_details.models import organisation
 
+class PriorityOrgView(APIView):
+    # permission_classes = [IsAuthenticated]
+    # authentication_classes = [JWTAuthentication]
+    # ... existing get() method ...
+    def get(self, request, org_id, *args, **kwargs):
+        # self.permission_required = "view_priority"
+        # if not HasRolePermission().has_permission(request, self.permission_required):
+        #     return Response({'error': 'Permission denied.'}, status=403)
 
+        try:
+            org = organisation.objects.get(organisation_id=org_id)  # <-- ✅ updated here
+        except organisation.DoesNotExist:
+            return Response({'error': 'Organisation not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        priorities = Priority.objects.filter(organisation=org)
+        if not priorities.exists():
+            return Response({'error': 'No priorities found for this organisation.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = PrioritySerializer(priorities, many=True)
+        return Response(serializer.data)
     
 class PriorityView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
+
+  
 
     # def get(self, request, pk=None, *args, **kwargs):
     #     self.permission_required = "view_priority"
@@ -191,6 +215,8 @@ def search_priorities(request):
 
     serializer = PrioritySerializer(priorities, many=True)
     return Response(serializer.data)
+
+
         
 
 

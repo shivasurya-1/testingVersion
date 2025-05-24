@@ -2,21 +2,21 @@ import { useState, useEffect, useRef } from "react";
 import { axiosInstance } from "../utils/axiosInstance";
 import Sidebar from "../components/Sidebar";
 import ChatbotPopup from "../components/ChatBot";
+import DispatcherAssignmentModal from "../pages/DispatcherAssignmentModal";
 import { ToastContainer, toast } from "react-toastify";
 import ReactPaginate from "react-paginate";
 import { FiSearch, FiRefreshCw } from "react-icons/fi";
 import { useSelector } from "react-redux";
 
-export default function DispatcherPage() {
+export default function Dispatcher() {
   // State for page data
   const [loading, setLoading] = useState(true);
   const [pageSize, setPageSize] = useState(10);
   const [unassignedTickets, setUnassignedTickets] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [totalEntries, setTotalEntries] = useState(0); 
-  const [availableSolutionGroups, setAvailableSolutionGroups] = useState([]);
+  const [totalEntries, setTotalEntries] = useState(0);
   const [currentEntries, setCurrentEntries] = useState({
-    start: 0, 
+    start: 0,
     end: 0,
   });
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,17 +25,6 @@ export default function DispatcherPage() {
   // State for assignment modal
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [supportStaff, setSupportStaff] = useState([]);
-  const [flatEmployeeData, setFlatEmployeeData] = useState([]);
-  const [supportOrganizations, setSupportOrganizations] = useState([]);
-  const [solutionGroups, setSolutionGroups] = useState([]);
-  const [assignmentData, setAssignmentData] = useState({
-    assigneeId: "",
-    supportOrgId: "",
-    solutionGroupId: "",
-  });
-  const [assignLoading, setAssignLoading] = useState(false);
-  const [adminOrganization, setAdminOrganization] = useState("");
   const accessToken = localStorage.getItem("access_token");
 
   const searchInputRef = useRef(null);
@@ -43,29 +32,9 @@ export default function DispatcherPage() {
 
   const userProfile = useSelector((state) => state.userProfile.user);
 
-  // Update admin organization when user profile is available
-  useEffect(() => {
-    if (userProfile?.organisation_name) {
-      setAdminOrganization(userProfile.organisation_name);
-    }
-  }, [userProfile]);
-
-  // Filter staff data when adminOrganization changes
-  useEffect(() => {
-    if (adminOrganization && flatEmployeeData.length > 0) {
-      const cleanedStaffData = flatEmployeeData.filter(
-        (item) =>
-          item.organisation_name?.toLowerCase() ===
-          adminOrganization.toLowerCase()
-      );
-      setSupportStaff(cleanedStaffData);
-    }
-  }, [adminOrganization, flatEmployeeData]);
-
   // Fetch unassigned tickets on component mount
   useEffect(() => {
     fetchUnassignedTickets();
-    fetchSupportData();
   }, []);
 
   // Fetch tickets when page size or current page changes
@@ -100,61 +69,38 @@ export default function DispatcherPage() {
     };
   }, [searchTerm]);
 
-  const flattenEmployees = (data, parentInfo = null) => {
-    let result = [];
-
-    data.forEach((entry) => {
-      const { children, ...employeeData } = entry;
-
-      result.push({
-        ...employeeData,
-        id: employeeData.employee_id, // Ensure id property exists
-        isChild: parentInfo !== null,
-        parentUsername: parentInfo?.username || null,
-        parentId: parentInfo?.employee_id || null,
-      });
-
-      if (children && Array.isArray(children) && children.length > 0) {
-        const childEntries = flattenEmployees(children, {
-          username: employeeData.username,
-          employee_id: employeeData.employee_id,
-        });
-        result = result.concat(childEntries);
-      }
-    });
-
-    return result;
-  };
-
   const fetchUnassignedTickets = async () => {
     setLoading(true);
 
     try {
       // Calculate offset based on current page and page size
       const offset = currentPage * pageSize;
-      
+
       // Prepare query parameters for pagination and search
       const params = {
         limit: pageSize,
-        offset: offset
+        offset: offset,
       };
-      
+
       // Add search term if it exists
       if (searchTerm.trim()) {
         params.search = searchTerm.trim();
       }
-      
+
       const response = await axiosInstance.get("/ticket/dispatcher/", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-        params: params
+        params: params,
       });
-      
+
       // Update tickets and total count - assuming API returns total count
-      const allTickets = response.data.results?.all_tickets || response.data.results?.all_ticket || [];
+      const allTickets =
+        response.data.results?.all_tickets ||
+        response.data.results?.all_ticket ||
+        [];
       setUnassignedTickets(allTickets);
-      
+
       // Update total count if the API provides it
       if (response.data.count !== undefined) {
         setTotalEntries(response.data.count);
@@ -162,12 +108,11 @@ export default function DispatcherPage() {
         // Fallback to local count if API doesn't provide total
         setTotalEntries(allTickets.length);
       }
-      
+
       // Calculate current entries
       const start = allTickets.length > 0 ? offset + 1 : 0;
       const end = Math.min(offset + pageSize, offset + allTickets.length);
       setCurrentEntries({ start, end });
-      
     } catch (error) {
       console.error("Error fetching unassigned tickets:", error);
       toast.error("Failed to load unassigned tickets");
@@ -176,70 +121,6 @@ export default function DispatcherPage() {
       setCurrentEntries({ start: 0, end: 0 });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchSupportData = async () => {
-    try {
-      const [staffRes, orgsRes, solutionsRes] = await Promise.all([
-        axiosInstance.get("/user/api/assignee/", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        axiosInstance.get("org/autoAssignee/", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        axiosInstance.get("/solution_grp/create/", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-      ]);
-      setSupportStaff(staffRes.data);
-
-      // Process employee data
-      // if (staffRes.data && Array.isArray(staffRes.data)) {
-      //   const flattened = flattenEmployees(staffRes.data);
-      //   setFlatEmployeeData(flattened);
-
-      //   // Initial filtering (will be refined in useEffect when adminOrganization is confirmed)
-      //   if (adminOrganization) {
-      //     const filtered = flattened.filter(
-      //       emp => emp.organisation_name?.toLowerCase() === adminOrganization.toLowerCase()
-      //     );
-      //     setSupportStaff(filtered);
-      //   } else {
-      //     setSupportStaff(flattened);
-      //   }
-      // }
-
-      // Process organization data
-      if (orgsRes.data && Array.isArray(orgsRes.data)) {
-        const cleanedOrgData = orgsRes.data.map((item) => ({
-          username: item.username,
-          organisation_name: item.organisation_name,
-          solutiongroup: item.solutiongroup,
-        }));
-        setSupportOrganizations(cleanedOrgData);
-      }
-
-      // Process solution groups data
-      if (Array.isArray(solutionsRes.data)) {
-        // If returned data is an array of objects with group_name property
-        if (solutionsRes.data.length > 0 && solutionsRes.data[0]?.group_name) {
-          // Map to just the group names for display
-          const groupNames = solutionsRes.data.map((group) => group.group_name);
-          setSolutionGroups(groupNames);
-          setAvailableSolutionGroups(groupNames);
-        } else {
-          // If it's just an array of strings or primitive values
-          setSolutionGroups(solutionsRes.data);
-          setAvailableSolutionGroups(solutionsRes.data);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching support data:", error);
-      toast.error("Failed to load support data");
-      setSupportStaff([]);
-      setSupportOrganizations([]);
-      setSolutionGroups([]);
     }
   };
 
@@ -257,118 +138,13 @@ export default function DispatcherPage() {
     setCurrentPage(0);
   };
 
-  const handleSolutionGroupChange = (e) => {
-    const solutionGroupId = e.target.value;
-    setAssignmentData((prev) => ({ ...prev, solutionGroupId }));
-  };
-
   const openAssignmentModal = (ticket) => {
     setSelectedTicket(ticket);
-    setAssignmentData({
-      assigneeId: "",
-      supportOrgId: "",
-      solutionGroupId: "",
-    });
     setShowAssignmentModal(true);
   };
 
-  const handleAssigneeChange = (e) => {
-    const assigneeId = e.target.value;
-
-    // Find the selected staff member
-    const selectedStaff = supportStaff.find(
-      (staff) =>
-        staff.id?.toString() === assigneeId ||
-        staff.employee_id?.toString() === assigneeId
-    );
-
-    if (selectedStaff) {
-      setAssignmentData((prev) => ({
-        ...prev,
-        assigneeId,
-        assignee: selectedStaff.username,
-        supportOrgId: selectedStaff.organisation_name,
-      }));
-    } else {
-      setAssignmentData((prev) => ({ ...prev, assigneeId }));
-    }
-  };
-
-  const handleAssignTicket = async (e) => {
-    e.preventDefault();
-
-    if (!assignmentData.assigneeId) {
-      toast.error("Please select an assignee");
-      return;
-    }
-
-    if (!assignmentData.solutionGroupId) {
-      toast.error("Please select a solution group");
-      return;
-    }
-
-    setAssignLoading(true);
-
-    if (!accessToken) {
-      toast.error("Please log in to assign tickets");
-      setAssignLoading(false);
-      return;
-    }
-    console.log(
-      "Assigning ticket with data Dispatcher:",
-      assignmentData,
-      "Selected ticket:",
-      selectedTicket
-    );
-    try {
-      await axiosInstance.put(
-        `/ticket/dispatcher/`,
-        {
-          ticket_id: selectedTicket.ticket_id,
-          developer_organization: assignmentData.supportOrgId,
-          is_active: true,
-          assignee: assignmentData.assigneeId,
-          solution_grp: assignmentData.solutionGroupId,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-      console.log("Ticket assigned successfully", assignmentData.assigneeId);
-
-      // After successful assignment, refresh the ticket list
-      fetchUnassignedTickets();
-      toast.success(
-        `Ticket #${selectedTicket.ticket_id} assigned successfully`
-      );
-
-      setShowAssignmentModal(false);
-    } catch (error) {
-      console.error("Error assigning ticket:", error);
-      toast.error("Failed to assign ticket");
-    } finally {
-      setAssignLoading(false);
-    }
-  };
-
-  const getOrganizationName = (orgId) => {
-    if (!orgId) return "Not assigned";
-
-    // If orgId is already a name
-    if (typeof orgId === "string") {
-      return orgId;
-    }
-
-    // Otherwise try to find by ID
-    const org = supportOrganizations.find(
-      (org) =>
-        org.organisation_id?.toString() === orgId.toString() ||
-        org.id?.toString() === orgId.toString()
-    );
-
-    return org ? org.organisation_name : "Unknown Organization";
+  const handleAssignmentSuccess = () => {
+    fetchUnassignedTickets();
   };
 
   // Format date for display
@@ -628,167 +404,14 @@ export default function DispatcherPage() {
             </div>
           )}
 
-          {/* Assignment Modal */}
+          {/* DispatcherAssignmentModal */}
           {showAssignmentModal && selectedTicket && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50">
-              <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto">
-                <div className="border-b border-gray-200 p-3 flex justify-between items-center">
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    Assign Ticket #{selectedTicket.ticket_id}
-                  </h2>
-                  <button
-                    onClick={() => setShowAssignmentModal(false)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="p-3 bg-gray-50 border-b">
-                  <div className="space-y-1 text-sm">
-                    <p>
-                      <span className="font-medium">Summary:</span>{" "}
-                      {selectedTicket.summary}
-                    </p>
-                    <p>
-                      <span className="font-medium">Issue Type:</span>{" "}
-                      {selectedTicket.issue_type}
-                    </p>
-                    <p>
-                      <span className="font-medium">Requested by:</span>{" "}
-                      {selectedTicket.created_by} (
-                      {selectedTicket.requester_email})
-                    </p>
-                    <p>
-                      <span className="font-medium">Priority:</span>
-                      <span
-                        className={`ml-2 px-2 py-0.5 rounded-full text-xs ${getPriorityBadgeClass(
-                          selectedTicket.priority
-                        )}`}
-                      >
-                        {selectedTicket.priority}
-                      </span>
-                    </p>
-                    {selectedTicket.description && (
-                      <div>
-                        <p className="font-medium">Description:</p>
-                        <div
-                          className="text-xs mt-1 p-2 bg-white rounded border border-gray-200 max-h-28 overflow-y-auto"
-                          dangerouslySetInnerHTML={{
-                            __html: selectedTicket.description,
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <form onSubmit={handleAssignTicket} className="p-4 space-y-4">
-                  <div>
-                    <label
-                      htmlFor="assignee"
-                      className="block text-xs font-medium text-gray-700 mb-1"
-                    >
-                      Assignee <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      id="assignee"
-                      value={assignmentData.assigneeId}
-                      onChange={handleAssigneeChange}
-                      required
-                      className="border border-gray-300 rounded-lg p-2 w-full text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Select an assignee</option>
-                      {supportStaff.map((staff) => (
-                        <option key={staff.id} value={staff.id?.toString()}>
-                          {staff.username}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="supportOrg"
-                      className="block text-xs font-medium text-gray-700 mb-1"
-                    >
-                      Support Organization
-                    </label>
-                    <input
-                      id="supportOrg"
-                      value={getOrganizationName(assignmentData.supportOrgId)}
-                      disabled
-                      className="border border-gray-300 rounded-lg p-2 w-full bg-gray-50 text-gray-500 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="solutionGroup"
-                      className="block text-xs font-medium text-gray-700 mb-1"
-                    >
-                      Solution Group <span className="text-red-500">*</span>
-                    </label>
-                    {solutionGroups.length > 0 ? (
-                      <select
-                        id="solutionGroup"
-                        value={assignmentData.solutionGroupId}
-                        onChange={handleSolutionGroupChange}
-                        required
-                        className="border border-gray-300 rounded-lg p-2 w-full text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select a solution group</option>
-                        {solutionGroups.map((group, index) => (
-                          <option
-                            key={index}
-                            value={
-                              typeof group === "object"
-                                ? group.group_name
-                                : group
-                            }
-                          >
-                            {typeof group === "object"
-                              ? group.group_name
-                              : group}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        id="solutionGroup"
-                        value="No solution groups available"
-                        disabled
-                        className="border border-gray-300 rounded-lg p-2 w-full bg-gray-50 text-gray-500 text-sm"
-                      />
-                    )}
-                  </div>
-
-                  <div className="flex justify-end pt-2 space-x-3 border-t border-gray-200">
-                    <button
-                      type="button"
-                      onClick={() => setShowAssignmentModal(false)}
-                      className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors flex items-center gap-1"
-                      disabled={assignLoading}
-                    >
-                      {assignLoading ? (
-                        <>
-                          <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Processing...</span>
-                        </>
-                      ) : (
-                        "Assign Ticket"
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
+            <DispatcherAssignmentModal
+              isOpen={showAssignmentModal}
+              onClose={() => setShowAssignmentModal(false)}
+              ticket={selectedTicket}
+              onAssignmentSuccess={handleAssignmentSuccess}
+            />
           )}
         </div>
       </main>

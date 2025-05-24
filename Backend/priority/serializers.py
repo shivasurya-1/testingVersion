@@ -8,7 +8,7 @@ class PrioritySerializer(serializers.ModelSerializer):
     modified_by = serializers.SlugRelatedField(read_only=True, slug_field='username')
     # organisation = serializers.SlugRelatedField(read_only=True, slug_field='organisation_name')
     organisation = serializers.SlugRelatedField(
-        slug_field='organisation_id',
+        slug_field='organisation_name',
         queryset=Organisation.objects.all(),  # Replace with actual model
         required=True
     )

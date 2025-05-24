@@ -156,30 +156,36 @@ export default function AssignmentModal({
   };
 
   const getPriorityColor = (priority) => {
-    if (!priority) return "text-gray-600 bg-gray-100";
-    const p = priority.toLowerCase();
-    if (p === "critical") return "text-red-700 bg-red-100 border-red-200";
-    if (p === "high") return "text-orange-700 bg-orange-100 border-orange-200";
-    if (p === "medium") return "text-yellow-700 bg-yellow-100 border-yellow-200";
-    return "text-green-700 bg-green-100 border-green-200";
-  };
+  if (!priority) return "text-gray-600 bg-gray-100";
+  const p = priority.toLowerCase();
+  if (p === "critical") return "text-red-700 bg-red-100 border-red-200";
+  if (p === "high") return "text-orange-700 bg-orange-100 border-orange-200";
+  if (p === "medium") return "text-yellow-700 bg-yellow-100 border-yellow-200";
+  return "text-green-700 bg-green-100 border-green-200";
+};
 
-  const getImpactColor = (impact) => {
-    if (!impact) return "text-gray-600 bg-gray-100";
-    const i = impact.toLowerCase();
-    if (i === "high") return "text-red-700 bg-red-50";
-    if (i === "medium") return "text-yellow-700 bg-yellow-50";
-    return "text-blue-700 bg-blue-50";
-  };
+const getImpactColor = (impact) => {
+  if (!impact) return "text-gray-600 bg-gray-100";
+  const i = impact.toLowerCase();
+  if (i === "critical") return "text-red-700 bg-red-100 border-red-200";
+  if (i === "high") return "text-orange-700 bg-orange-100 border-orange-200";
+  if (i === "medium") return "text-yellow-700 bg-yellow-100 border-yellow-200";
+  return "text-green-700 bg-green-100 border-green-200";
+};
 
   const getStatusColor = (status) => {
-    if (!status) return "text-gray-600 bg-gray-100";
-    const s = status.toLowerCase();
-    if (s === "open") return "text-blue-700 bg-blue-100 border-blue-200";
-    if (s === "in progress") return "text-orange-700 bg-orange-100 border-orange-200";
-    if (s === "resolved") return "text-green-700 bg-green-100 border-green-200";
-    return "text-gray-700 bg-gray-100 border-gray-200";
-  };
+  if (!status) return "text-gray-600 bg-gray-100";
+  const s = status.toLowerCase();
+  if (s === "open") return "text-blue-700 bg-blue-100 border-blue-200";
+  if (s === "working in progress") return "text-orange-700 bg-orange-100 border-orange-200";
+  if (s === "waiting for user response") return "text-purple-700 bg-purple-100 border-purple-200";
+  if (s === "resolved") return "text-green-700 bg-green-100 border-green-200";
+  if (s === "closed") return "text-gray-700 bg-gray-100 border-gray-200";
+  if (s === "breached") return "text-red-700 bg-red-100 border-red-200";
+  if (s === "canceled") return "text-slate-700 bg-slate-100 border-slate-200";
+  if (s === "delegated") return "text-indigo-700 bg-indigo-100 border-indigo-200";
+  return "text-gray-700 bg-gray-100 border-gray-200";
+};
 
   if (!isOpen) return null;
 
@@ -432,6 +438,7 @@ export default function AssignmentModal({
                   <button
                     type="submit"
                     disabled={assignLoading}
+                    onClick={handleAssignTicket}
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
                   >
                     {assignLoading ? (

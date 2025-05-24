@@ -51,6 +51,18 @@ class TicketSerializer(serializers.ModelSerializer):
 
     )
     
+    ticket_organization = serializers.SlugRelatedField(
+
+        queryset=Organisation.objects.all(),
+
+        slug_field='organisation_id',
+
+        required=False,
+
+        allow_null=True
+
+    )
+    
     solution_grp = serializers.SlugRelatedField(
 
         queryset=SolutionGroup.objects.all(),
@@ -99,6 +111,7 @@ class TicketSerializer(serializers.ModelSerializer):
         representation["service_type"] = instance.service_type.name if instance.service_type else None
         representation["solution_grp"] = instance.solution_grp.group_name if instance.solution_grp else None
         representation["developer_organization"] = instance.developer_organization.organisation_name if instance.developer_organization else None
+        representation["ticket_organization"] = instance.ticket_organization.organisation_id if instance.ticket_organization else None
         representation["assignee"] = instance.assignee.username if instance.assignee else None
         representation["created_by"] = instance.created_by.username if instance.created_by else None
         representation["modified_by"] = instance.modified_by.username if instance.modified_by else None

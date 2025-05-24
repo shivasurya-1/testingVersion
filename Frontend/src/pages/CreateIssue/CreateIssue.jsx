@@ -97,6 +97,7 @@ export default function CreateIssue() {
     contactNumber: "",
     contactMode: "",
     search: "",
+    ticketOrganisation: "",
   });
 
   const [solutionGroupList, setSolutionGroupList] = useState([]);
@@ -473,8 +474,9 @@ export default function CreateIssue() {
     if (userProfile?.username && userProfile?.email) {
       setFormData((prev) => ({
         ...prev,
-        requestor: userProfile.username,
-        email: userProfile.email,
+        requestor: userProfile?.username,
+        email: userProfile?.email,
+        ticketOrganisation: userProfile?.organisation_name || "",
       }));
     }
   }, [userProfile]);
@@ -629,7 +631,8 @@ export default function CreateIssue() {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  console.log("Attachments", attachments);
+  console.log(organizationsList, "organizationsList");
+
 
   const handleChange = useCallback(
     (e) => {
@@ -691,6 +694,11 @@ export default function CreateIssue() {
       (user) => user.username === data.assignee
     );
     const assigneeUserId = selectedAssignee?.id || "";
+    const ticketOrganisationObj = organizationsList.find(
+      (org) => org.organisation_name === data.ticketOrganisation
+    );
+    const ticketOrganisationId = ticketOrganisationObj?.organisation_id || "";
+    console.log("ticketOrganisationId", ticketOrganisationId);
     return {
       ticket_id: data.number,
       assignee: assigneeUserId,
@@ -713,6 +721,7 @@ export default function CreateIssue() {
       created_by: data.requestor,
       is_active: isActive,
       attachments: attachments,
+      ticket_organization: ticketOrganisationId,
     };
   };
 

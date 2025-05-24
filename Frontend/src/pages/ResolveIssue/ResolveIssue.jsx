@@ -61,39 +61,35 @@ export default function ResolveIssue() {
   }, [ticket]);
 
   // Fetch ticket details
+  const fetchTicketDetails = async () => {
+    try {
+      const response = await axiosInstance.get(`ticket/tickets/${ticketId}/`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+      });
+      console.log("Ticket Details", response);
+      setTicket(response.data);
+      setAttachments(response.data.attachments || []);
+      setQuestionData((prev) => ({
+        ...prev,
+        ticket: response.data.ticket_id,
+      }));
+
+      // Initialize assignment data
+      setAssignmentData({
+        assigneeId: "",
+        assignee: response.data.assignee || "",
+        supportOrgId: response.data.developer_organization || "",
+        solutionGroupId: response.data.solution_grp || "",
+      });
+    } catch (error) {
+      console.error("Error fetching ticket details:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
-    const fetchTicketDetails = async () => {
-      try {
-        const response = await axiosInstance.get(
-          `ticket/tickets/${ticketId}/`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-            },
-          }
-        );
-        console.log("Ticket Details", response);
-        setTicket(response.data);
-        setAttachments(response.data.attachments || []);
-        setQuestionData((prev) => ({
-          ...prev,
-          ticket: response.data.ticket_id,
-        }));
-
-        // Initialize assignment data
-        setAssignmentData({
-          assigneeId: "",
-          assignee: response.data.assignee || "",
-          supportOrgId: response.data.developer_organization || "",
-          solutionGroupId: response.data.solution_grp || "",
-        });
-      } catch (error) {
-        console.error("Error fetching ticket details:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTicketDetails();
   }, [ticketId]);
 
@@ -154,10 +150,8 @@ export default function ResolveIssue() {
     });
   };
 
-  const handlePriorityUpdate = (updatedTicket) => {
-    // Update the ticket state with the new priority data
-    setTicket(updatedTicket);
-    toast.success("Priority updated successfully!");
+  const refetchTicketDetails = () => {
+    fetchTicketDetails();
   };
 
   const updateTicketStatus = (newStatus) => {
@@ -182,9 +176,6 @@ export default function ResolveIssue() {
     );
     return priorityItem ? priorityItem.priority_id : null;
   };
-
-  console.log("Assignee ", ticket?.assignee?.toLowerCase());
-  console.log("Username", userProfile?.username?.toLowerCase());
 
   // Handle Start Work button click
   const handleStartWork = async () => {
@@ -767,8 +758,7 @@ export default function ResolveIssue() {
           isOpen={isPriorityModalOpen}
           onClose={() => setIsPriorityModalOpen(false)}
           ticket={ticket}
-          priorityChoices={priorityChoices}
-          onPriorityUpdate={handlePriorityUpdate}
+          refetchTicketDetails={refetchTicketDetails}
         />
 
         {/* Toast Container and Chatbot */}

@@ -77,7 +77,9 @@ class Ticket(models.Model):
         null=True, 
         default="")
     customer_number = models.CharField(max_length=50, blank=True, null=True,)
-    developer_organization = models.ForeignKey(Organisation, on_delete=models.CASCADE, null=True, blank=True)
+    developer_organization = models.ForeignKey(Organisation, on_delete=models.CASCADE, null=True, blank=True,related_name='developer_organization_tickets')
+    ticket_organization = models.ForeignKey(Organisation, on_delete=models.CASCADE, null=True, blank=True,related_name='ticket_organization_tickets')
+    
     
     # developer_organization = models.ForeignKey(
     #     Organisation, on_delete=models.CASCADE, related_name="organisation_tickets"
