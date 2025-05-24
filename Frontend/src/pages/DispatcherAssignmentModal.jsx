@@ -96,62 +96,80 @@ export default function DispatcherAssignmentModal({
     }));
   };
 
-  const handleAssignTicket = async (e) => {
-    e.preventDefault();
+const handleAssignTicket = async (e) => {
+  e.preventDefault();
+  
+  if (!accessToken) {
+    toast.error("Authentication required");
+    return;
+  }
 
-    if (!accessToken) {
-      toast.error("Authentication required");
-      return;
-    }
+  if (!assignmentData.assigneeId) {
+    toast.error("Please select an assignee");
+    return;
+  }
 
-    if (!assignmentData.assigneeId) {
-      toast.error("Please select an assignee");
-      return;
-    }
+  if (!assignmentData.solutionGroupId) {
+    toast.error("Please select a solution group");
+    return;
+  }
 
-    if (!assignmentData.solutionGroupId) {
-      toast.error("Please select a solution group");
-      return;
-    }
+  setAssignLoading(true);
 
-    setAssignLoading(true);
+  try {
+    // Find selected staff member for organization info
+    const selectedStaff = supportStaff.find(
+      (staff) =>
+        staff.id?.toString() === assignmentData.assigneeId ||
+        staff.employee_id?.toString() === assignmentData.assigneeId
+    );
 
+    const requestData = {
+      ticket_id: ticket.ticket_id,
+      developer_organization: selectedStaff?.organisation_name || "",
+      is_active: true,
+      assignee: assignmentData.assigneeId,
+      solution_grp: assignmentData.solutionGroupId,
+    };
+
+    await axiosInstance.put(`/ticket/dispatcher/`, requestData, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    // ADD THIS: History entry for dispatcher assignment
     try {
-      // Find selected staff member for organization info
-      const selectedStaff = supportStaff.find(
-        (staff) =>
-          staff.id?.toString() === assignmentData.assigneeId ||
-          staff.employee_id?.toString() === assignmentData.assigneeId
-      );
-
-      const requestData = {
-        ticket_id: ticket.ticket_id,
-        developer_organization: selectedStaff?.organisation_name || "",
-        is_active: true,
-        assignee: assignmentData.assigneeId,
-        solution_grp: assignmentData.solutionGroupId,
-      };
-
-      await axiosInstance.put(`/ticket/dispatcher/`, requestData, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+      await axiosInstance.post(
+        'ticket/history/',
+        {
+          title: `Ticket assigned by dispatcher to ${selectedStaff?.username || selectedStaff?.name || 'assignee'}`,
+          ticket: ticket.ticket_id
         },
-      });
-
-      toast.success(`Ticket #${ticket.ticket_id} assigned successfully`);
-
-      if (onAssignmentSuccess) {
-        onAssignmentSuccess();
-      }
-
-      onClose();
-    } catch (error) {
-      console.error("Assignment error:", error);
-      toast.error("Failed to assign ticket");
-    } finally {
-      setAssignLoading(false);
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+    } catch (historyError) {
+      console.error("Error adding history entry:", historyError);
     }
-  };
+
+    toast.success(`Ticket #${ticket.ticket_id} assigned successfully`);
+            
+    if (onAssignmentSuccess) {
+      onAssignmentSuccess();
+    }
+
+    onClose();
+  } catch (error) {
+    console.error("Assignment error:", error);
+    toast.error("Failed to assign ticket");
+  } finally {
+    setAssignLoading(false);
+  }
+};
   const getPriorityColor = (priority) => {
     if (!priority) return "text-gray-600 bg-gray-100";
     const p = priority.toLowerCase();

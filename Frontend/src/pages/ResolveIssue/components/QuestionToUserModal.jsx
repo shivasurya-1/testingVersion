@@ -11,6 +11,7 @@ export default function QuestionToUserModal({
   ticketStatus,
   updateTicketStatus,
   refreshChatMessages,
+  onQuestionSent,
 }) {
   // State hooks
   const [expandEditor, setExpandEditor] = useState(false);
@@ -317,6 +318,10 @@ export default function QuestionToUserModal({
       }
 
       toast.success("Question submitted to user successfully!");
+         if (typeof onQuestionSent === "function") {
+        onQuestionSent();
+      }
+   
     } catch (error) {
       console.error("Failed to submit question:", error);
     } finally {

@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { ToastContainer, toast } from "react-toastify";
 import { formatDate } from "../../utils/formatDate";
 import "react-toastify/dist/ReactToastify.css";
-import { ChevronLeft, X, Paperclip, Trash2 } from "lucide-react";
+import { ChevronLeft, X, Paperclip, Trash2, Clock } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import ChatbotPopup from "../../components/ChatBot";
 import QuillTextEditor from "../CreateIssue/Components/QuillTextEditor";
@@ -45,6 +45,9 @@ export default function ResolveIssue() {
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
   const [isPriorityModalOpen, setIsPriorityModalOpen] = useState(false);
+  // History state
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Reference to ChatUI component - will be used to access its methods
   const chatUIRef = useRef(null);
@@ -115,6 +118,13 @@ export default function ResolveIssue() {
     fetchTicketChoices();
   }, []);
 
+  // Fetch history when History tab is selected
+  useEffect(() => {
+    if (currentTab === "History" && ticket?.ticket_id) {
+      fetchHistory();
+    }
+  }, [currentTab, ticket?.ticket_id]);
+
   useEffect(() => {
     if (tabContentRef.current) {
       // Ensure the tab content is visible
@@ -124,6 +134,51 @@ export default function ResolveIssue() {
       });
     }
   }, [currentTab]);
+
+  // Fetch history function
+  const fetchHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const response = await axiosInstance.get(
+        `ticket/history/?ticket=${ticket?.ticket_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        }
+      );
+      setHistory(response.data || []);
+    } catch (error) {
+      console.error("Error fetching history:", error);
+      toast.error("Failed to fetch ticket history");
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Add history entry function
+  const addHistoryEntry = async (title, ticketId) => {
+    try {
+      await axiosInstance.post(
+        'ticket/history/',
+        {
+          title: title,
+          ticket: ticketId
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        }
+      );
+      // Refresh history if History tab is active
+      if (currentTab === "History") {
+        fetchHistory();
+      }
+    } catch (error) {
+      console.error("Error adding history entry:", error);
+    }
+  };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -148,6 +203,16 @@ export default function ResolveIssue() {
       supportOrgId: updatedTicket.developer_organization || "",
       solutionGroupId: updatedTicket.solution_grp || "",
     });
+    addHistoryEntry(`Ticket assigned to ${updatedTicket.assignee}`, updatedTicket.ticket_id);
+  };
+
+  const handlePriorityUpdate = (updatedTicket) => {
+    // Update the ticket state with the new priority data
+    setTicket(updatedTicket);
+    toast.success("Priority updated successfully!");
+    
+    // Add history entry
+    addHistoryEntry(`Priority changed to ${updatedTicket.priority}`, updatedTicket.ticket_id);
   };
 
   const refetchTicketDetails = () => {
@@ -155,8 +220,14 @@ export default function ResolveIssue() {
   };
 
   const updateTicketStatus = (newStatus) => {
+    const oldStatus = ticket?.status;
     setTicket((prev) => ({ ...prev, status: newStatus }));
     setEditableStatus(newStatus);
+
+    // Add history entry
+    if (oldStatus !== newStatus) {
+      addHistoryEntry(`Status changed from ${oldStatus} to ${newStatus}`, ticket?.ticket_id);
+    }
   };
 
   // Helper function to get impact code from label
@@ -210,23 +281,54 @@ export default function ResolveIssue() {
       setTicket(response.data);
       setEditableStatus("Working in Progress");
       toast.success("Status updated to Working in Progress!");
+      // Add history entry
+      addHistoryEntry("Work started on ticket", ticket?.ticket_id);
     } catch (error) {
       console.error("Failed to update status:", error);
     }
   };
 
-  const tabs = ["Notes", "RelatedRecords"];
+  // Function to handle chat updates and add to history
+  const handleChatUpdate = (message, messageType = 'comment') => {
+    // Add history entry for chat updates
+    let historyTitle = '';
+    
+    switch(messageType) {
+      case 'question':
+        historyTitle = 'Question sent to user';
+        break;
+      case 'reply':
+        historyTitle = 'Reply added to ticket';
+        break;
+      case 'note':
+        historyTitle = 'Internal note added';
+        break;
+      default:
+        historyTitle = 'Comment added to ticket';
+    }
+    
+    addHistoryEntry(historyTitle, ticket?.ticket_id);
+  };
 
-  // Case 1: If the ticket status is "Resolved", always include "ResolutionInfo"
-  if (ticket?.status === "Resolved") {
-    tabs.push("ResolutionInfo");
-  }
-  // Case 2: If the status is NOT "Resolved", only include "ResolutionInfo" if the logged-in user is the assignee
-  else if (
-    ticket?.assignee?.toLowerCase() === userProfile?.username?.toLowerCase()
-  ) {
-    tabs.push("ResolutionInfo");
-  }
+  // Generate tabs array dynamically
+  const generateTabs = () => {
+    const baseTabs = ["Notes", "RelatedRecords", "History"];
+    
+    // Case 1: If the ticket status is "Resolved", always include "ResolutionInfo"
+    if (ticket?.status === "Resolved") {
+      baseTabs.push("ResolutionInfo");
+    }
+    // Case 2: If the status is NOT "Resolved", only include "ResolutionInfo" if the logged-in user is the assignee
+    else if (
+      ticket?.assignee?.toLowerCase() === userProfile?.username?.toLowerCase()
+    ) {
+      baseTabs.push("ResolutionInfo");
+    }
+    
+    return baseTabs;
+  };
+
+  const tabs = generateTabs();
 
   const renderField = (label, value, additionalClasses = "") => {
     const displayValue = value || "N/A";
@@ -240,6 +342,47 @@ export default function ResolveIssue() {
           {label}
         </label>
         <div className={fieldClasses}>{displayValue}</div>
+      </div>
+    );
+  };
+
+  const renderHistoryContent = () => {
+    if (historyLoading) {
+      return (
+        <div className="flex justify-center items-center py-8">
+          <div className="text-gray-500">Loading history...</div>
+        </div>
+      );
+    }
+
+    if (!history || history.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          <Clock size={48} className="mx-auto mb-4 text-gray-300" />
+          <p>No history entries found for this ticket</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {history.map((entry) => (
+          <div key={entry.history_id} className="border-l-2 border-gray-200 pl-4 pb-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="text-sm font-medium text-gray-900">
+                  {entry.title}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  by {entry.modified_by || entry.created_by} • {formatDate(entry.modified_at)}
+                </div>
+              </div>
+              <div className="ml-4">
+                <Clock size={14} className="text-gray-400" />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     );
   };
@@ -458,101 +601,15 @@ export default function ResolveIssue() {
           {/* Tab Content with reference for scrolling */}
           <div className="p-4 bg-white" ref={tabContentRef}>
             {currentTab === "Notes" && (
-              <ChatUI ref={chatUIRef} ticketId={ticket?.ticket_id} />
+              <ChatUI 
+                ref={chatUIRef} 
+                ticketId={ticket?.ticket_id}
+                onChatUpdate={handleChatUpdate}
+              />
             )}
-            {/* 
-            {currentTab === "RelatedRecords" && (
-              <div className="p-2">
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-medium text-lg">Attachments</h3>
-                  </div>
 
-                  <div className="border ">
-                    
-                    <table className="w-full">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="border-b p-2 text-left">File</th>
-                          <th className="border-b p-2 text-left">
-                            Uploaded At
-                          </th>
-                          <th className="border-b p-2 text-left">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {attachments && attachments.length > 0 ? (
-                          attachments.map((attachment) => {
-                    
-                            const urlPath = attachment.file_url.replace(
-                              /^https?:\/\/[^\/]+/,
-                              ""
-                            );
-                          
-                            const backendUrl =
-                              process.env.REACT_APP_API_BASE_URL ||
-                              "http://localhost:8000";
-                            const fullUrl = `${backendUrl}${urlPath}`;
-
-                            return (
-                              <tr
-                                key={attachment.id}
-                                className="hover:bg-gray-50"
-                              >
-                                <td className="border-b p-2">
-                                  <div className="flex items-center">
-                                    <Paperclip
-                                      size={16}
-                                      className="mr-2 text-gray-500"
-                                    />
-                                    <span className="text-gray-700">
-                                      {attachment.file_name}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="border-b p-2">
-                                  {new Date(
-                                    attachment.uploaded_at
-                                  ).toLocaleString()}
-                                </td>
-                                <td className="border-b p-2">
-                                  <div className="flex space-x-2">
-                                    <a
-                                      href={fullUrl}
-                                      className="text-blue-500 hover:underline"
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                    >
-                                      View
-                                    </a>
-                                    <a
-                                      href={fullUrl}
-                                      className="text-blue-500 hover:underline"
-                                      download={attachment.file_name}
-                                    >
-                                      Download
-                                    </a>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        ) : (
-                          <tr>
-                            <td
-                              colSpan="3"
-                              className="p-4 text-center text-gray-500"
-                            >
-                              No attachments found for this ticket
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )} */}
+            {currentTab === "History" && renderHistoryContent()}
+            
             {currentTab === "RelatedRecords" && (
               <div className="p-2">
                 <div>
@@ -745,6 +802,7 @@ export default function ResolveIssue() {
               chatUIRef.current.fetchMessages(ticket.ticket_id);
             }
           }}
+          onQuestionSent={() => handleChatUpdate('Question sent to user', 'question')}
         />
 
         <AssignmentModal
@@ -759,6 +817,7 @@ export default function ResolveIssue() {
           onClose={() => setIsPriorityModalOpen(false)}
           ticket={ticket}
           refetchTicketDetails={refetchTicketDetails}
+          onPriorityUpdate={handlePriorityUpdate}
         />
 
         {/* Toast Container and Chatbot */}

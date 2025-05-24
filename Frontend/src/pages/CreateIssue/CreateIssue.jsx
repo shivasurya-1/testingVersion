@@ -49,10 +49,8 @@ export default function CreateIssue() {
   const [attachments, setAttachments] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
 
-  // Project related data
-  const [projectData, setProjectData] = useState([]);
-  const [requestorList, setRequestorList] = useState([]);
-  const [projectsPerRequestor, setProjectsPerRequestor] = useState({});
+const [assignedProjects, setAssignedProjects] = useState([]);
+const [requestorList, setRequestorList] = useState([]);
 
   const [usersListWithOrganisations, setUsersListWithOrganisations] = useState(
     []
@@ -511,7 +509,7 @@ export default function CreateIssue() {
           activeUsersList,
           priorityList,
           nextTicketId,
-          projectDetailsResponse,
+         assignedProjectsResponse,
           usersListWithOrganisations,
         ] = await Promise.all([
           axiosInstance.get("solution_grp/create/", authHeaders),
@@ -520,10 +518,10 @@ export default function CreateIssue() {
           axiosInstance.get("user/api/assignee/", authHeaders),
           axiosInstance.get("priority/priority/", authHeaders),
           axiosInstance.get("ticket/getId/", authHeaders),
-          axiosInstance.get("project/details/", authHeaders),
+          axiosInstance.get("ticket/create/", authHeaders),
           axiosInstance.get("org/autoAssignee/", authHeaders),
         ]);
-        console.log("project ", projectDetailsResponse);
+       console.log(activeUsersList)
         setSolutionGroupList(subGroupsList.data);
         setOrganizationsList(orgList.data);
         setActiveUsersList(activeUsersList.data);
@@ -534,6 +532,10 @@ export default function CreateIssue() {
         setUsersListWithOrganisations(usersListWithOrganisations.data);
 
         console.log(activeUsersList);
+
+
+
+     setRequestorList(activeUsersList.data.map((user) => user.username));
         // Set Low priority as default
         if (priorityList.data) {
           const priorityMinorChoice = priorityList.data.find(
@@ -558,42 +560,10 @@ export default function CreateIssue() {
             }));
           }
         }
-
-        if (
-          projectDetailsResponse.data &&
-          projectDetailsResponse.data.length > 0
-        ) {
-          // Set project data for product mapping
-          if (projectDetailsResponse.data[0].all_project) {
-            setProjectData(projectDetailsResponse.data[0].all_project);
-          }
-
-          // Set project list for dropdown
-          const allProjects =
-            projectDetailsResponse.data[0].all_project?.map(
-              (p) => p.project_name
-            ) || [];
-          setProjectList(allProjects);
-
-          // Set requestors list
-          if (
-            projectDetailsResponse.data[2] &&
-            projectDetailsResponse.data[2].requestor_ids
-          ) {
-            setRequestorList(projectDetailsResponse.data[2].requestor_ids);
-          }
-
-          if (
-            projectDetailsResponse.data[1] &&
-            projectDetailsResponse.data[1].assigned_projects
-          ) {
-            const projectMapping = {};
-            projectDetailsResponse.data[1].assigned_projects.forEach((item) => {
-              projectMapping[item.name] = item.assigned_projects;
-            });
-            setProjectsPerRequestor(projectMapping);
-          }
-        }
+if (assignedProjectsResponse.data && assignedProjectsResponse.data.assigned_projects) {
+  setAssignedProjects(assignedProjectsResponse.data.assigned_projects);
+}
+   
         const ticketNumber = nextTicketId.data;
         setFormData((prev) => ({
           ...prev,
@@ -657,14 +627,14 @@ export default function CreateIssue() {
 
         const updatedData = { ...prev, [name]: sanitizedValue };
 
-        // If project changed, update product
-        if (name === "project") {
-          const productInfo = projectData.find((p) => p.project_name === value);
-          if (productInfo) {
-            updatedData.product = productInfo.product_mail || "";
-          }
-        }
-
+   
+if (name === "project") {
+  const selectedProject = assignedProjects.find((p) => p.project_id.toString() === value);
+  if (selectedProject) {
+    updatedData.product = selectedProject.product_mail || "";
+    updatedData.project_id = selectedProject.project_id;
+  }
+}
         // Auto assignee-organization connection
         if (name === "assignee" && activeUsersList.length) {
           const selectedStaff = activeUsersList.find(
@@ -685,7 +655,7 @@ export default function CreateIssue() {
 
       setFormErrors((prev) => ({ ...prev, [name]: "" }));
     },
-    [activeUsersList, projectData, usersListWithOrganisations]
+    [activeUsersList, usersListWithOrganisations]
   ); // Add dependencies
 
   const convertFormDataToSnakeCase = (data) => {
@@ -710,7 +680,7 @@ export default function CreateIssue() {
       reference_tickets: data.referenceTicket,
       impact: data.impact,
       support_team: data.supportTeam,
-      project: data.project_id,
+    project: data.project_id || data.project,
       product: data.product,
       customer_country: data.customerCountry,
       developer_organization: data.developerOrganization,
@@ -744,15 +714,16 @@ export default function CreateIssue() {
     // }
 
     // Auto-populate product when project is selected
-    if (name === "project") {
-      const productInfo = projectData.find((p) => p.project_name === value);
-      if (productInfo) {
-        setFormData((prev) => ({
-          ...prev,
-          product: productInfo.product_mail || "",
-        }));
-      }
-    }
+ if (name === "project") {
+  const selectedProject = assignedProjects.find((p) => p.project_id.toString() === value);
+  if (selectedProject) {
+    setFormData((prev) => ({
+      ...prev,
+      product: selectedProject.product_mail || "",
+      project_id: selectedProject.project_id,
+    }));
+  }
+}
   };
 
   const [relatedRecords, setRelatedRecords] = useState([
@@ -788,83 +759,109 @@ export default function CreateIssue() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) {
-      // toast.error("Please fill in all required fields.");
-      return;
-    }
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validateForm()) {
+    return;
+  }
 
-    setIsLoading(true);
-    const accessToken = localStorage.getItem("access_token");
-    console.log("formData Submit Page", formData);
-    try {
-      const response = await axiosInstance.post(
-        "/ticket/create/",
-        convertFormDataToSnakeCase(formData),
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      // sendMessage();
-      console.log("Converted Form Data", convertFormDataToSnakeCase(formData));
-
-      toast.success(`Ticket ${response.data.ticket_id} raised successfully`);
-      // setTimeout(() => {
-      // Reset form
-      setFormData((prev) => ({
-        ...prev,
-        number: "", // Or fetch new ticket ID if needed
-        requestor: userProfile?.username || "",
-        customerCountry: "india",
-        supportOrgName: "",
-        assignee: "",
-        solutionGroup: "",
-        referenceTicket: [],
-        description: "",
-        summary: "",
-        impact: "",
-        supportTeam: "",
-        project: "",
-        product: "",
-        priority: "",
-        email: userProfile?.email || "",
-        developerOrganization: "",
-        contactNumber: "",
-        contactMode: "",
-        search: "",
-      }));
-
-      // Reset additional state
-      setAttachments([]);
-      setNewMessage("");
-      setExpandEditor(false);
-      setFormErrors({});
-    } catch (error) {
-      console.log("Ticket Not Creating", error);
-      if (error.response && error.response.data) {
-        const errors = error.response.data;
-
-        // Loop through each error field
-        for (const [field, message] of Object.entries(errors)) {
-          // Customize messages based on field
-          if (field === "summary") {
-            toast.error("Summary should not contain more than 250 characters.");
-          } else {
-            // Fallback for unexpected fields
-            toast.error(`${field}: ${message}`);
-          }
-        }
-      } else {
-        toast.error("Network or server error.");
+  setIsLoading(true);
+  const accessToken = localStorage.getItem("access_token");
+  console.log("formData Submit Page", formData);
+  
+  try {
+    const response = await axiosInstance.post(
+      "/ticket/create/",
+      convertFormDataToSnakeCase(formData),
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "multipart/form-data",
+        },
       }
-    } finally {
-      setIsLoading(false);
+    );
+
+    console.log("Converted Form Data", convertFormDataToSnakeCase(formData));
+    const ticketId = response.data.ticket_id;
+
+    // ADD THIS: Helper function for adding history entries
+    const addHistoryEntry = async (title, ticketId) => {
+      try {
+        await axiosInstance.post(
+          'ticket/history/',
+          { title: title, ticket: ticketId },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+      } catch (error) {
+        console.error("Error adding history entry:", error);
+      }
+    };
+
+    // ADD THIS: Add creation history
+    await addHistoryEntry("Ticket created", ticketId);
+
+    // ADD THIS: Check if ticket was directly assigned or sent to dispatcher
+    if (formData.assignee && formData.assignee.trim() !== "") {
+      // Directly assigned case
+      await addHistoryEntry(`Ticket directly assigned to ${formData.assignee}`, ticketId);
+    } else {
+      // Sent to dispatcher case (when no assignee is selected)
+      await addHistoryEntry("Ticket sent to dispatcher for assignment", ticketId);
     }
-  };
+
+    toast.success(`Ticket ${ticketId} raised successfully`);
+    
+    // Reset form (your existing reset logic)
+    setFormData((prev) => ({
+      ...prev,
+      number: "",
+      requestor: userProfile?.username || "",
+      customerCountry: "india",
+      supportOrgName: "",
+      assignee: "",
+      solutionGroup: "",
+      referenceTicket: [],
+      description: "",
+      summary: "",
+      impact: "",
+      supportTeam: "",
+      project: "",
+      product: "",
+      priority: "",
+      email: userProfile?.email || "",
+      developerOrganization: "",
+      contactNumber: "",
+      contactMode: "",
+      search: "",
+    }));
+
+    setAttachments([]);
+    setNewMessage("");
+    setExpandEditor(false);
+    setFormErrors({});
+    
+  } catch (error) {
+    console.log("Ticket Not Creating", error);
+    if (error.response && error.response.data) {
+      const errors = error.response.data;
+      for (const [field, message] of Object.entries(errors)) {
+        if (field === "summary") {
+          toast.error("Summary should not contain more than 250 characters.");
+        } else {
+          toast.error(`${field}: ${message}`);
+        }
+      }
+    } else {
+      toast.error("Network or server error.");
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const getFilteredHistory = () => {
     let filtered = [...historyData];
@@ -1282,28 +1279,30 @@ export default function CreateIssue() {
                   ))}
                 </select>
               </div> */}
-              <div className="flex items-center">
-                <label className="w-44 text-gray-600 text-right pr-2">
-                  Project
-                </label>
-                <div className="w-64">
-                  <SearchableField
-                    name="project"
-                    value={formData.project}
-                    onChange={handleChange}
-                    options={
-                      formData.requestor &&
-                      projectsPerRequestor[
-                        formData.requestor
-                      ] /* Filter projects based on requestor if applicable */
-                        ? projectsPerRequestor[formData.requestor]
-                        : projectList
-                    }
-                    placeholder="Select project..."
-                    error={formErrors.project}
-                  />
-                </div>
-              </div>
+             <div className="flex items-center">
+  <label className="w-44 text-gray-600 text-right pr-2">
+    Project
+  </label>
+  <select
+    name="project"
+    value={formData.project}
+    onChange={handleChange}
+    onFocus={() => handleFocus("project")}
+    onBlur={handleBlur}
+    className={`border px-2 py-1 w-64 outline-none ${
+      focusedField === "project"
+        ? "ring-2 ring-blue-100 border-blue-600"
+        : "border-gray-300"
+    }`}
+  >
+    <option value="">-- Select Project --</option>
+    {assignedProjects.map((project) => (
+      <option key={project.project_id} value={project.project_id}>
+        {project.project_name}
+      </option>
+    ))}
+  </select>
+</div>
               <div className="flex items-center">
                 <label className="w-44 text-gray-600 text-right pr-2">
                   Project Owner

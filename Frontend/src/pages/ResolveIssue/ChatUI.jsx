@@ -13,7 +13,7 @@ import { toast } from "react-toastify";
 import QuillTextEditor from "../CreateIssue/Components/QuillTextEditor";
 import RichTextViewer from "../../components/common/RichTextViewer"; // Import the RichTextViewer
 
-const ChatUI = forwardRef((props, ref) => {
+const ChatUI = forwardRef(({ onChatUpdate }, ref) => {
   // URL and State Management
   const { ticketId } = useParams();
   const userProfile = useSelector((state) => state.userProfile.user);
@@ -304,6 +304,9 @@ const ChatUI = forwardRef((props, ref) => {
 
       // Refresh messages to get server-assigned IDs and proper statuses
       fetchMessages(ticketDetails.ticketId);
+      if (typeof onChatUpdate === "function") {
+        onChatUpdate("Comment added to ticket", "comment");
+      }
     } catch (error) {
       console.error(
         "Error sending message:",

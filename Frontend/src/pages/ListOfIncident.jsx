@@ -12,6 +12,7 @@ const IncidentTrackingSystem = () => {
   const [expandedIncident, setExpandedIncident] = useState(null);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [filterStatus, setFilterStatus] = useState('All');
+  const [filterPriority, setFilterPriority] = useState('All');
   const [slaData, setSlaData] = useState({});
   const [slaTimers, setSlaTimers] = useState({});
 
@@ -224,7 +225,9 @@ const IncidentTrackingSystem = () => {
     const matchesSearch = incident.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
       incident.ticket_id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All' || incident.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const matchesPriority = filterPriority === 'All' || incident.priority === filterPriority;
+    
+    return matchesSearch && matchesStatus && matchesPriority;
   });
 
   // Handle incident click
@@ -247,7 +250,7 @@ const IncidentTrackingSystem = () => {
 
   const handleClick = () => {
     // Directly navigating to the full path
-    navigate('/request-issue/application-support/sap/create-issue');
+    navigate('/request-issue/');
   };
 
   return (
@@ -294,13 +297,15 @@ const IncidentTrackingSystem = () => {
                 <option value="Resolved">Resolved</option>
                 <option value="Blocked">Blocked</option>
               </select>
-              <select className="px-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">
-                <option>All Priorities</option>
-                <option>Critical</option>
-                <option>Major</option>
-                <option>Medium</option>
-                <option>Low</option>
-                <option>Minor</option>
+              <select className="px-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+               value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value)}>
+                <option value="All">All Priorities</option>
+                <option value="Critical" >Critical</option>
+                <option  value="Major">Major</option>
+                <option value="Medium">Medium</option>
+                <option value="Low" >Low</option>
+                <option value="Minor"> Minor</option>
               </select>
             </div>
           </div>

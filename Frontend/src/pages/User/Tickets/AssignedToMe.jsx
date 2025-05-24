@@ -254,7 +254,7 @@ export default function AssignedToMe() {
                 className="px-3 py-1 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700 transition-colors"
                 onClick={() =>
                   (window.location.href =
-                    "/request-issue/application-support/sap/create-issue")
+                    "/request-issue/")
                 }
               >
                 New Ticket
