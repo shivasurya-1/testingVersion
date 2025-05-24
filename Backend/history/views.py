@@ -23,7 +23,7 @@ class HistoryAPI(APIView):
         
         
         try:
-            ticket = request.data['ticket']
+            ticket = request.query_params.get('ticket')
             print(ticket)
             history = History.objects.filter(ticket=ticket)
             serializer = TicketHistorySerializer(history, many=True)

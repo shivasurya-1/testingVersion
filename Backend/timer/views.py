@@ -193,27 +193,24 @@ class CreateTicketAPIView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get_assigned_projects(self, user):
+    def get(self, request, *args, **kwargs):
+        # Get assigned projects for the current user
         assigned_projects_qs = ProjectsDetails.objects.filter(
-            projects__project_asignee=user,
+            projects__project_asignee=request.user,
             projects__is_active=True
         ).distinct()
- 
-        return [
-            {
+
+        assigned_projects = []
+        for project in assigned_projects_qs:
+            assigned_projects.append({
                 "project_id": project.project_id,
                 "project_name": project.project_name,
-            }
-            for project in assigned_projects_qs
-        ]
- 
-    def get(self, request):
-        # Return list of projects assigned to the logged-in user
-        assigned_projects = self.get_assigned_projects(request.user)
+                "product_mail": project.product_mail or "",  # Make sure this field exists in your model
+            })
+
         return Response({
             "assigned_projects": assigned_projects
         })
- 
 
     def post(self, request):
         self.permission_required = "create_ticket"
