@@ -12,6 +12,8 @@ import { axiosInstance } from "../../utils/axiosInstance";
 import ResolutionInfo from "../ResolutionInfo";
 import ChatUI from "./ChatUI";
 import QuestionToUserModal from "./components/QuestionToUserModal";
+import AssignmentModal from "./components/AssignmentModal";
+import PriorityModal from "./components/PriorityModal";
 
 export default function ResolveIssue() {
   const { ticketId } = useParams();
@@ -41,6 +43,8 @@ export default function ResolveIssue() {
     attachments: [],
   });
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [isPriorityModalOpen, setIsPriorityModalOpen] = useState(false);
 
   // Reference to ChatUI component - will be used to access its methods
   const chatUIRef = useRef(null);
@@ -115,36 +119,6 @@ export default function ResolveIssue() {
     fetchTicketChoices();
   }, []);
 
-  // Fetch attachments
-  // useEffect(() => {
-  //   const fetchAttachments = async () => {
-  //     if (!ticketId || !ticket) return;
-
-  //     try {
-  //       const response = await axiosInstance.get("ticket/attachments/", {
-  //         headers: {
-  //           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-  //         },
-  //         params: { ticket_id: ticketId },
-  //       });
-
-  //       // Filter attachments for the current ticket
-  //       const ticketAttachments = response.data.filter(
-  //         (attachment) => attachment.ticket === ticket.ticket_id
-  //       );
-
-  //       setAttachments(ticketAttachments);
-  //     } catch (error) {
-  //       console.error("Error fetching attachments:", error);
-  //     }
-  //   };
-
-  //   if (ticket) {
-  //     fetchAttachments();
-  //   }
-  // }, [ticket, ticketId]);
-
-  // Scroll to content when tab changes
   useEffect(() => {
     if (tabContentRef.current) {
       // Ensure the tab content is visible
@@ -159,6 +133,31 @@ export default function ResolveIssue() {
 
   const handleQuestionToUser = () => {
     setIsQuestionModalOpen(true);
+  };
+
+  const handleAssignClick = () => {
+    setIsAssignmentModalOpen(true);
+  };
+
+  const handleChangePriority = () => {
+    setIsPriorityModalOpen(true);
+  };
+
+  const handleAssignmentSuccess = (updatedTicket) => {
+    // Update the ticket state with the new assignment data
+    setTicket(updatedTicket);
+    setAssignmentData({
+      assigneeId: "",
+      assignee: updatedTicket.assignee || "",
+      supportOrgId: updatedTicket.developer_organization || "",
+      solutionGroupId: updatedTicket.solution_grp || "",
+    });
+  };
+
+  const handlePriorityUpdate = (updatedTicket) => {
+    // Update the ticket state with the new priority data
+    setTicket(updatedTicket);
+    toast.success("Priority updated successfully!");
   };
 
   const updateTicketStatus = (newStatus) => {
@@ -334,6 +333,7 @@ export default function ResolveIssue() {
                         <button
                           type="button"
                           className="border  px-4 py-2 text-xs bg-gray-50 text-gray-700 hover:bg-gray-100"
+                          onClick={handleAssignClick}
                         >
                           Assign
                         </button>
@@ -341,6 +341,7 @@ export default function ResolveIssue() {
                         <button
                           type="button"
                           className="border  px-4 py-2 text-xs bg-gray-50 text-gray-700 hover:bg-gray-100"
+                          onClick={handleChangePriority}
                         >
                           Change Priority
                         </button>
@@ -357,6 +358,7 @@ export default function ResolveIssue() {
                         <button
                           type="button"
                           className="border  px-4 py-2 text-xs bg-gray-50 text-gray-700 hover:bg-gray-100"
+                          onClick={handleAssignClick}
                         >
                           Assign
                         </button>
@@ -364,6 +366,7 @@ export default function ResolveIssue() {
                         <button
                           type="button"
                           className="border  px-4 py-2 text-xs bg-gray-50 text-gray-700 hover:bg-gray-100"
+                          onClick={handleChangePriority}
                         >
                           Change Priority
                         </button>
@@ -751,6 +754,21 @@ export default function ResolveIssue() {
               chatUIRef.current.fetchMessages(ticket.ticket_id);
             }
           }}
+        />
+
+        <AssignmentModal
+          isOpen={isAssignmentModalOpen}
+          onClose={() => setIsAssignmentModalOpen(false)}
+          ticket={ticket}
+          onAssignmentSuccess={handleAssignmentSuccess}
+        />
+
+        <PriorityModal
+          isOpen={isPriorityModalOpen}
+          onClose={() => setIsPriorityModalOpen(false)}
+          ticket={ticket}
+          priorityChoices={priorityChoices}
+          onPriorityUpdate={handlePriorityUpdate}
         />
 
         {/* Toast Container and Chatbot */}

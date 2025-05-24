@@ -314,7 +314,12 @@ export default function DispatcherPage() {
       setAssignLoading(false);
       return;
     }
-
+    console.log(
+      "Assigning ticket with data Dispatcher:",
+      assignmentData,
+      "Selected ticket:",
+      selectedTicket
+    );
     try {
       await axiosInstance.put(
         `/ticket/dispatcher/`,

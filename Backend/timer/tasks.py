@@ -627,3 +627,145 @@ def send_dispatch_assignment_emails(ticket_id, developer_email, dispatcher_email
         except Exception as e:
             logger.exception(f"[ERROR] Failed to send confirmation email to dispatcher ({dispatcher_email}): {str(e)}")
             raise
+
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+@shared_task
+def send_ticket_reassignment_email(ticket_id, assignee_email, reassigned_by):
+    """
+    Send email notification when a ticket is reassigned to a new user
+    
+    Args:
+        ticket_id (str): The ticket ID (e.g., 'S00000066')
+        assignee_email (str): Email of the new assignee
+        reassigned_by (str): Username of the person who made the reassignment
+    
+    Returns:
+        str: Success or error message
+    """
+    try:
+        # Email subject
+        subject = f'Ticket {ticket_id} - New Assignment'
+        
+        # HTML email content
+        html_message = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Ticket Assignment Notification</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }}
+                .header {{
+                    background-color: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 5px;
+                    margin-bottom: 20px;
+                }}
+                .ticket-info {{
+                    background-color: #e3f2fd;
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin: 15px 0;
+                }}
+                .footer {{
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid #eee;
+                    font-size: 12px;
+                    color: #666;
+                }}
+                .btn {{
+                    display: inline-block;
+                    padding: 10px 20px;
+                    background-color: #007bff;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    margin: 10px 0;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>🎫 Ticket Assignment Notification</h2>
+            </div>
+            
+            <p>Hello,</p>
+            
+            <p>You have been assigned a new support ticket that requires your attention.</p>
+            
+            <div class="ticket-info">
+                <h3>Ticket Details:</h3>
+                <ul>
+                    <li><strong>Ticket ID:</strong> {ticket_id}</li>
+                    <li><strong>Assigned by:</strong> {reassigned_by}</li>
+                    <li><strong>Assignment Date:</strong> {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</li>
+                </ul>
+            </div>
+            
+            <p>Please log in to the support system to view the complete ticket details and take appropriate action.</p>
+            
+            <a href="#" class="btn">View Ticket Details</a>
+            
+            <p>If you have any questions about this assignment, please contact your supervisor or the person who assigned this ticket to you.</p>
+            
+            <div class="footer">
+                <p>This is an automated notification from the Support Ticket System.</p>
+                <p>Please do not reply to this email.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Plain text version (fallback)
+        plain_message = f"""
+        Ticket Assignment Notification
+        
+        Hello,
+        
+        You have been assigned a new support ticket that requires your attention.
+        
+        Ticket Details:
+        - Ticket ID: {ticket_id}
+        - Assigned by: {reassigned_by}
+        - Assignment Date: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+        
+        Please log in to the support system to view the complete ticket details and take appropriate action.
+        
+        If you have any questions about this assignment, please contact your supervisor or the person who assigned this ticket to you.
+        
+        ---
+        This is an automated notification from the Support Ticket System.
+        Please do not reply to this email.
+        """
+        
+        # Send the email
+        from django.core.mail import EmailMultiAlternatives
+        
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=plain_message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourdomain.com'),
+            to=[assignee_email]
+        )
+        msg.attach_alternative(html_message, "text/html")
+        msg.send()
+        
+        logger.info(f"Ticket reassignment email sent successfully to {assignee_email} for ticket {ticket_id}")
+        return f"Reassignment email sent successfully to {assignee_email} for ticket {ticket_id}"
+        
+    except Exception as e:
+        error_msg = f"Failed to send reassignment email to {assignee_email} for ticket {ticket_id}: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
