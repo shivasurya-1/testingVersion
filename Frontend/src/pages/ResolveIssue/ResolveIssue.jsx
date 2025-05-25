@@ -147,7 +147,13 @@ export default function ResolveIssue() {
           },
         }
       );
-      setHistory(response.data || []);
+      const sortedHistory = (response.data || []).sort(
+        (a, b) =>
+          new Date(b.modified_at || b.created_at) -
+          new Date(a.modified_at || a.created_at)
+      );
+      setHistory(sortedHistory);
+
     } catch (error) {
       console.error("Error fetching history:", error);
       toast.error("Failed to fetch ticket history");
@@ -160,10 +166,10 @@ export default function ResolveIssue() {
   const addHistoryEntry = async (title, ticketId) => {
     try {
       await axiosInstance.post(
-        'ticket/history/',
+        "ticket/history/",
         {
           title: title,
-          ticket: ticketId
+          ticket: ticketId,
         },
         {
           headers: {
@@ -203,16 +209,21 @@ export default function ResolveIssue() {
       supportOrgId: updatedTicket.developer_organization || "",
       solutionGroupId: updatedTicket.solution_grp || "",
     });
-    addHistoryEntry(`Ticket assigned to ${updatedTicket.assignee}`, updatedTicket.ticket_id);
+    addHistoryEntry(
+      `Ticket assigned to ${updatedTicket.assignee}`,
+      updatedTicket.ticket_id
+    );
   };
 
   const handlePriorityUpdate = (updatedTicket) => {
     // Update the ticket state with the new priority data
     setTicket(updatedTicket);
-    toast.success("Priority updated successfully!");
-    
+
     // Add history entry
-    addHistoryEntry(`Priority changed to ${updatedTicket.priority}`, updatedTicket.ticket_id);
+    addHistoryEntry(
+      `Priority changed to ${updatedTicket.priority}`,
+      updatedTicket.ticket_id
+    );
   };
 
   const refetchTicketDetails = () => {
@@ -226,7 +237,10 @@ export default function ResolveIssue() {
 
     // Add history entry
     if (oldStatus !== newStatus) {
-      addHistoryEntry(`Status changed from ${oldStatus} to ${newStatus}`, ticket?.ticket_id);
+      addHistoryEntry(
+        `Status changed from ${oldStatus} to ${newStatus}`,
+        ticket?.ticket_id
+      );
     }
   };
 
@@ -289,31 +303,31 @@ export default function ResolveIssue() {
   };
 
   // Function to handle chat updates and add to history
-  const handleChatUpdate = (message, messageType = 'comment') => {
+  const handleChatUpdate = (message, messageType = "comment") => {
     // Add history entry for chat updates
-    let historyTitle = '';
-    
-    switch(messageType) {
-      case 'question':
-        historyTitle = 'Question sent to user';
+    let historyTitle = "";
+
+    switch (messageType) {
+      case "question":
+        historyTitle = "Question sent to user";
         break;
-      case 'reply':
-        historyTitle = 'Reply added to ticket';
+      case "reply":
+        historyTitle = "Reply added to ticket";
         break;
-      case 'note':
-        historyTitle = 'Internal note added';
+      case "note":
+        historyTitle = "Internal note added";
         break;
       default:
-        historyTitle = 'Comment added to ticket';
+        historyTitle = "Comment added to ticket";
     }
-    
+
     addHistoryEntry(historyTitle, ticket?.ticket_id);
   };
 
   // Generate tabs array dynamically
   const generateTabs = () => {
     const baseTabs = ["Notes", "RelatedRecords", "History"];
-    
+
     // Case 1: If the ticket status is "Resolved", always include "ResolutionInfo"
     if (ticket?.status === "Resolved") {
       baseTabs.push("ResolutionInfo");
@@ -324,7 +338,7 @@ export default function ResolveIssue() {
     ) {
       baseTabs.push("ResolutionInfo");
     }
-    
+
     return baseTabs;
   };
 
@@ -367,14 +381,18 @@ export default function ResolveIssue() {
     return (
       <div className="space-y-3">
         {history.map((entry) => (
-          <div key={entry.history_id} className="border-l-2 border-gray-200 pl-4 pb-4">
+          <div
+            key={entry.history_id}
+            className="border-l-2 border-gray-200 pl-4 pb-4"
+          >
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="text-sm font-medium text-gray-900">
                   {entry.title}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  by {entry.modified_by || entry.created_by} • {formatDate(entry.modified_at)}
+                  by {entry.modified_by || entry.created_by} •{" "}
+                  {formatDate(entry.modified_at)}
                 </div>
               </div>
               <div className="ml-4">
@@ -525,11 +543,12 @@ export default function ResolveIssue() {
                 {renderField("Service Domain", ticket?.service_domain)}
                 {renderField("Service Type", ticket?.service_type)}
                 {renderField("Requestor", ticket?.created_by)}
-                {renderField("Solution Group", ticket?.solution_grp)}
+                {ticket?.solution_grp &&
+                  renderField("Solution Group", ticket?.solution_grp)}
                 {renderField("Assignee", ticket?.assignee)}
 
-                {ticket?.contact_mode === "phone" &&
-                  renderField("Contact Number", ticket?.customer_number)}
+                {/* {ticket?.contact_mode === "phone" &&
+                  renderField("Contact Number", ticket?.customer_number)} */}
               </div>
 
               {/* Column 2 */}
@@ -537,8 +556,9 @@ export default function ResolveIssue() {
                 {renderField("Status", editableStatus)}
                 {renderField("Impact", ticket?.impact)}
                 {renderField("Priority", ticket?.priority)}
-                {renderField("Project", ticket?.project)}
-                {renderField("Product", ticket?.product)}
+                {ticket?.project && renderField("Project", ticket?.project)}
+                {ticket?.project_owner_email &&
+                  renderField("Product", ticket?.project_owner_email)}
 
                 {renderField(
                   "Created On",
@@ -601,15 +621,15 @@ export default function ResolveIssue() {
           {/* Tab Content with reference for scrolling */}
           <div className="p-4 bg-white" ref={tabContentRef}>
             {currentTab === "Notes" && (
-              <ChatUI 
-                ref={chatUIRef} 
+              <ChatUI
+                ref={chatUIRef}
                 ticketId={ticket?.ticket_id}
                 onChatUpdate={handleChatUpdate}
               />
             )}
 
             {currentTab === "History" && renderHistoryContent()}
-            
+
             {currentTab === "RelatedRecords" && (
               <div className="p-2">
                 <div>
@@ -802,7 +822,9 @@ export default function ResolveIssue() {
               chatUIRef.current.fetchMessages(ticket.ticket_id);
             }
           }}
-          onQuestionSent={() => handleChatUpdate('Question sent to user', 'question')}
+          onQuestionSent={() =>
+            handleChatUpdate("Question sent to user", "question")
+          }
         />
 
         <AssignmentModal
@@ -817,7 +839,6 @@ export default function ResolveIssue() {
           onClose={() => setIsPriorityModalOpen(false)}
           ticket={ticket}
           refetchTicketDetails={refetchTicketDetails}
-          onPriorityUpdate={handlePriorityUpdate}
         />
 
         {/* Toast Container and Chatbot */}

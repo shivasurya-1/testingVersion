@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { axiosInstance } from "../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
+import { Beaker } from "lucide-react";
 
 export default function DispatcherAssignmentModal({
   isOpen,
@@ -19,7 +20,35 @@ export default function DispatcherAssignmentModal({
   const [dataLoading, setDataLoading] = useState(false);
 
   const userProfile = useSelector((state) => state.userProfile.user);
+  let adminorg= userProfile?.organisation_name;
+
   const accessToken = localStorage.getItem("access_token");
+
+  
+  const flattenEmployees = (data, parentInfo = null) => {
+    let result = [];
+
+    data.forEach((entry) => {
+      const { children, ...employeeData } = entry;
+
+      result.push({
+        ...employeeData,
+        isChild: parentInfo !== null,
+        parentUsername: parentInfo?.username || null,
+        parentId: parentInfo?.employee_id || null,
+      });
+
+      if (children && Array.isArray(children) && children.length > 0) {
+        const childEntries = flattenEmployees(children, {
+          username: employeeData.username,
+          employee_id: employeeData.employee_id,
+        });
+        result = result.concat(childEntries);
+      }
+    });
+
+    return result;
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -38,16 +67,34 @@ export default function DispatcherAssignmentModal({
   const fetchSupportData = async () => {
     setDataLoading(true);
     try {
-      const [staffRes, solutionsRes] = await Promise.all([
+      const [staffRes, staffDet, solutionsRes] = await Promise.all([
         axiosInstance.get("/user/api/assignee/", {
           headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        axiosInstance.get("/org/employee/",{
+          headers:{Authorization:`Bearer ${accessToken}`}
         }),
         axiosInstance.get("/solution_grp/create/", {
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
       ]);
+const flatEmployeeData = flattenEmployees(staffDet.data);
 
-      setSupportStaff(staffRes.data || []);
+const orgMap = new Map(
+  flatEmployeeData.map(user => [user.username?.trim().toLowerCase(), user.organisation_name])
+);
+
+const enrichedSupportStaff = (staffRes.data || []).map(user => ({
+  ...user,
+  organisation_name: orgMap.get(user.username?.trim().toLowerCase()) || "Unknown"
+}));
+
+const filteredSupportStaff = enrichedSupportStaff.filter(
+  (user) => user.organisation_name === adminorg
+);
+
+setSupportStaff(filteredSupportStaff);
+console.log("Filtered Support Staff:", filteredSupportStaff); 
 
       // Handle solution groups data structure
       if (Array.isArray(solutionsRes.data)) {
@@ -404,7 +451,7 @@ const handleAssignTicket = async (e) => {
                       value={assignmentData.assigneeId}
                       onChange={handleAssigneeChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white outline-none"
                     >
                       <option value="">Select assignee...</option>
                       {supportStaff.map((staff) => (
@@ -428,7 +475,7 @@ const handleAssignTicket = async (e) => {
                         value={assignmentData.solutionGroupId}
                         onChange={handleSolutionGroupChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white outline-none"
                       >
                         <option value="">Select solution group...</option>
                         {solutionGroups.map((group) => (

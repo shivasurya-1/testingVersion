@@ -3,7 +3,7 @@ import { X, AlertTriangle, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { axiosInstance } from "../../../utils/axiosInstance";
 import { toast } from "react-toastify";
 
-const PriorityModal = ({ isOpen, onClose, ticket, refetchTicketDetails, onPriorityUpdate }) => {
+const PriorityModal = ({ isOpen, onClose, ticket, refetchTicketDetails }) => {
   const [selectedPriority, setSelectedPriority] = useState("");
   const [currentPriority, setCurrentPriority] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -15,7 +15,7 @@ const PriorityModal = ({ isOpen, onClose, ticket, refetchTicketDetails, onPriori
   // Fetch priorities when modal opens
   useEffect(() => {
     const fetchPriorities = async () => {
-      if (isOpen && organisationId) {
+      if (organisationId) {
         setIsLoadingPriorities(true);
         try {
           const response = await axiosInstance.get(
@@ -125,11 +125,6 @@ const PriorityModal = ({ isOpen, onClose, ticket, refetchTicketDetails, onPriori
       ...ticket,
       priority: selectedPriorityObj.urgency_name // Use the display name, not the ID
     };
-
-    // Call the priority update callback with the updated ticket
-    if (onPriorityUpdate) {
-      onPriorityUpdate(updatedTicket);
-    }
 
     // Also refresh ticket details if needed
     if (refetchTicketDetails) {

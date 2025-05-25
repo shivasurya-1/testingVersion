@@ -707,11 +707,6 @@ export default function UserRoles() {
                               }
                               disabled={submitting}
                             >
-                              {userRole.is_active ? (
-                                <FiToggleRight size={16} />
-                              ) : (
-                                <FiToggleLeft size={16} />
-                              )}
                             </button>
                           </div>
                         </td>

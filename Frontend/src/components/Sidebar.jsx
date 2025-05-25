@@ -35,6 +35,7 @@ function Sidebar() {
   const location = useLocation();
   const userProfile = useSelector((state) => state.userProfile.user);
   const isAdmin = userProfile?.role === "Admin";
+  const isDispatcher = userProfile?.role === "Dispatcher";
 
   // Track open sections
   const [openSections, setOpenSections] = useState({
@@ -44,6 +45,7 @@ function Sidebar() {
     // resources: false,
     admin: false,
     projects: false,
+    dispatcher: false,
   });
 
   // Track open nested sections
@@ -71,8 +73,8 @@ function Sidebar() {
     createIncident: false,
     reportIssue: false,
     serviceRequest: true, // Disabled as requested
-    myTickets: isAdmin, // Available for non-admin users only
-    assignedToMe: isAdmin, // Available for non-admin users only
+    myTickets: isAdmin || isDispatcher, // Available for non-admin, non-dispatcher users only
+    assignedToMe: isAdmin || isDispatcher, // Available for non-admin, non-dispatcher users only
     grouptickets: false,
     projects: false,
     allActivities: false,
@@ -85,6 +87,9 @@ function Sidebar() {
     category: false,
     solutionGroup: false,
     projectAssignment: false,
+
+    // Dispatcher specific
+    dispatcher: false,
 
     // Disabled items
     rolePermissions: true,
@@ -106,14 +111,17 @@ function Sidebar() {
     }));
   };
 
-  // Define which items should be shown for admin vs non-admin
+  // Define which items should be shown for admin vs non-admin vs dispatcher
   const getItemVisibility = (item) => {
     // Default visibility rules if not specified
     if (!item.showForRoles) {
       if (isAdmin) {
         return true; // Show all items to admin by default
+      } else if (isDispatcher) {
+        // For dispatcher, only show these specific items by default
+        return ["dashboard", "incidents", "dispatcher"].includes(item.id);
       } else {
-        // For non-admin, only show these specific items by default
+        // For non-admin, non-dispatcher, only show these specific items by default
         return ["dashboard", "incidents", "createIncident", "reportIssue", "serviceRequest", "myTickets", "assignedToMe"].includes(item.id);
       }
     }
@@ -122,7 +130,8 @@ function Sidebar() {
     return (
       item.showForRoles.includes("all") || 
       (isAdmin && item.showForRoles.includes("Admin")) ||
-      (!isAdmin && item.showForRoles.includes("non-admin"))
+      (isDispatcher && item.showForRoles.includes("Dispatcher")) ||
+      (!isAdmin && !isDispatcher && item.showForRoles.includes("non-admin"))
     );
   };
 
@@ -131,8 +140,11 @@ function Sidebar() {
     if (!group.showForRoles) {
       if (isAdmin) {
         return true; // Show all groups to admin by default
+      } else if (isDispatcher) {
+        // For dispatcher, only show these specific groups by default
+        return ["dashboard", "incidents", "dispatcher"].includes(group.id);
       } else {
-        // For non-admin, only show these specific groups by default
+        // For non-admin, non-dispatcher, only show these specific groups by default
         return ["dashboard", "incidents"].includes(group.id);
       }
     }
@@ -141,12 +153,43 @@ function Sidebar() {
     return (
       group.showForRoles.includes("all") || 
       (isAdmin && group.showForRoles.includes("Admin")) ||
-      (!isAdmin && group.showForRoles.includes("non-admin"))
+      (isDispatcher && group.showForRoles.includes("Dispatcher")) ||
+      (!isAdmin && !isDispatcher && group.showForRoles.includes("non-admin"))
     );
   };
 
   // Organize sidebar items into logical groups
-  const sidebarGroups = [
+  const sidebarGroups = isDispatcher ? [
+    // Direct items for Dispatcher - no subcategories
+    {
+      id: "dispatcher-items",
+      title: "Navigation",
+      showForRoles: ["Dispatcher"],
+      items: [
+        {
+          id: "dashboard",
+          name: "Dashboard",
+          route: "/request-issue/application-support/request-issue/application-support/Dashborad",
+          icon: <LayoutDashboard size={16} />,
+          showForRoles: ["Dispatcher"]
+        },
+        {
+          id: "incidents",
+          name: "All Tickets",
+          route: "/request-issue/application-support/request-issue/application-support/list-of-incidents",
+          icon: <AlertTriangle size={16} />,
+          showForRoles: ["Dispatcher"]
+        },
+        {
+          id: "dispatcher",
+          name: "Dispatcher",
+          route: "/dispatcher",
+          icon: <MonitorCheck size={16} />,
+          showForRoles: ["Dispatcher"]
+        },
+      ],
+    }
+  ] : [
     {
       id: "dashboard",
       title: "Dashboard",
@@ -178,7 +221,7 @@ function Sidebar() {
           name: "Create Ticket",
           route: "#",
           icon: <PlusCircle size={16} />,
-          showForRoles: ["all"],
+          showForRoles: ["Admin", "non-admin"], // Not available for Dispatcher
           hasSubItems: true,
           subItems: [
             {
@@ -186,14 +229,14 @@ function Sidebar() {
               name: "Report an Issue",
               route: "/request-issue",
               icon: <AlertTriangle size={14} />,
-              showForRoles: ["all"]
+              showForRoles: ["Admin", "non-admin"] // Not available for Dispatcher
             },
             {
               id: "serviceRequest",
               name: "Raise a Service Request",
               route: "/request-service",
               icon: <Ticket size={14} />,
-              showForRoles: ["all"]
+              showForRoles: ["Admin", "non-admin"] // Not available for Dispatcher
             }
           ]
         },
@@ -258,7 +301,7 @@ function Sidebar() {
     {
       id: "configuration",
       title: "Configuration",
-      showForRoles: ["all"], // Only for Admin
+      showForRoles: ["Admin"], // Only for Admin
       items: [
         {
           id: "priority",
@@ -398,13 +441,6 @@ function Sidebar() {
           name: "User Role Assignment",
           route: "/user-role",
           icon: <RollerCoaster size={16} />,
-          showForRoles: ["Admin"]
-        },
-        {
-          id: "dispatcher",
-          name: "Dispatcher Settings",
-          route: "/dispatcher",
-          icon: <MonitorCheck size={16} />,
           showForRoles: ["Admin"]
         },
         // {

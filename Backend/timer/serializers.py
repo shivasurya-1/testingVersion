@@ -116,6 +116,7 @@ class TicketSerializer(serializers.ModelSerializer):
         representation["created_by"] = instance.created_by.username if instance.created_by else None
         representation["modified_by"] = instance.modified_by.username if instance.modified_by else None
         representation["priority"] = instance.priority.urgency_name if instance.priority else None
+        representation["project"] = instance.project.project_name if instance.project else None
  
         # Choice field display values
         representation["impact"] = instance.get_impact_display()

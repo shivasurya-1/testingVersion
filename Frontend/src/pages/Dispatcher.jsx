@@ -416,7 +416,7 @@ export default function Dispatcher() {
         </div>
       </main>
       <ChatbotPopup />
-      <ToastContainer position="bottom-right" autoClose={3000} />
+      <ToastContainer position="bottom-top" autoClose={3000} />
     </div>
   );
 }
