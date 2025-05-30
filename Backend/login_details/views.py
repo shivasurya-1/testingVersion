@@ -110,67 +110,10 @@ class RegisterGetAPIVIEW(APIView):
 
 
 class LoginUserAPIView(APIView):
+    permission_classes = [AllowAny]
     """Handles user login with proper validation, authentication, and error handling."""
 
-    # def post(self, request):
-    #     try:
-    #         email = request.data.get("email")
-    #         password = request.data.get("password")
-
-    #         if not email or not password:
-    #             logger.warning(f"Login attempt with missing email or password: {request.data}")
-    #             return Response(
-    #                 {"error": "Email and password are required."},
-    #                 status=status.HTTP_400_BAD_REQUEST
-    #             )
-
-    #         try:
-    #             user_obj = User.objects.get(email=email)
-    #         except User.DoesNotExist:
-    #             logger.warning(f"Login failed: User with email '{email}' not found.")
-    #             return Response(
-    #                 {"error": "Invalid email or password."},
-    #                 status=status.HTTP_401_UNAUTHORIZED
-    #             )
-
-    #         user = authenticate(username=user_obj.username, password=password)
-
-    #         if user is None:
-    #             logger.warning(f"Login failed: Invalid password for user '{email}'.")
-    #             return Response(
-    #                 {"error": "Invalid email or password."},
-    #                 status=status.HTTP_401_UNAUTHORIZED
-    #             )
-
-    #         if not user.is_active:
-    #             logger.warning(f"Login failed: Inactive user '{email}'.")
-    #             return Response(
-    #                 {"error": "Account is disabled. Please contact support."},
-    #                 status=status.HTTP_403_FORBIDDEN
-    #             )
-
-    #         refresh = RefreshToken.for_user(user)
-
-    #         # Trigger background task
-    #         async_setup_user_related_records.delay(user.id)
-
-    #         logger.info(f"Login successful for user '{email}'.")
-
-    #         return Response(
-    #             {
-    #                 "message": "Login successful.",
-    #                 "access": str(refresh.access_token),
-    #                 "refresh": str(refresh),
-    #             },
-    #             status=status.HTTP_200_OK,
-    #         )
-
-    #     except Exception as e:
-    #         logger.error(f"Unexpected error during login: {str(e)}", exc_info=True)
-    #         return Response(
-    #             {"error": "An unexpected error occurred. Please try again later."},
-    #             status=status.HTTP_500_INTERNAL_SERVER_ERROR
-    #         )
+   
     def post(self, request):
         try:
             email = request.data.get("email")
@@ -263,6 +206,7 @@ class SomeProtectedView(APIView):
         return Response({"message": "You have access!"})
 
 class LogoutUserAPIView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         logout(request)
         return Response({"message": "Successfully logged out."}, status=status.HTTP_200_OK)
@@ -270,6 +214,7 @@ class LogoutUserAPIView(APIView):
 
 
 class OTPRequestAPIView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         serializer = OTPRequestSerializer(data=request.data)
         if serializer.is_valid():
@@ -294,6 +239,7 @@ class OTPRequestAPIView(APIView):
 
 
 class OTPVerifyAPIView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')
         otp_input = request.data.get('otp')
@@ -321,6 +267,7 @@ class OTPVerifyAPIView(APIView):
 
 
 class NewPasswordAPIView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')
         new_password = request.data.get('new_password')

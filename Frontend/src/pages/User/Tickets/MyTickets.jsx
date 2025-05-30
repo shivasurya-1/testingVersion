@@ -20,12 +20,12 @@ export default function MyTickets() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(15); // Match AssignedToMe default
   const [currentEntries, setCurrentEntries] = useState({
     start: 0,
     end: 0,
   });
-  
+
   useEffect(() => {
     const fetchEmployeeData = async () => {
       const accessToken = localStorage.getItem("access_token");
@@ -103,7 +103,7 @@ export default function MyTickets() {
         "Error fetching tickets:",
         err.response ? err.response.data : err.message
       );
-      
+
       setError(err.message || "Failed to fetch tickets");
       setAllTickets([]);
       setLoading(false);
@@ -117,7 +117,7 @@ export default function MyTickets() {
     // Apply search filter
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase().trim();
-      filtered = filtered.filter(ticket => {
+      filtered = filtered.filter((ticket) => {
         const searchFields = [
           ticket.ticket_id?.toString(),
           ticket.summary,
@@ -126,10 +126,10 @@ export default function MyTickets() {
           ticket.issue_type,
           ticket.product,
           ticket.assigned_to,
-          ticket.requester
+          ticket.requester,
         ];
-        
-        return searchFields.some(field => 
+
+        return searchFields.some((field) =>
           field?.toString().toLowerCase().includes(searchLower)
         );
       });
@@ -142,25 +142,28 @@ export default function MyTickets() {
         let bVal = b[sortConfig.key];
 
         // Handle different data types
-        if (sortConfig.key === 'created_at' || sortConfig.key === 'updated_at') {
+        if (
+          sortConfig.key === "created_at" ||
+          sortConfig.key === "updated_at"
+        ) {
           // Handle date sorting
           aVal = new Date(aVal || 0);
           bVal = new Date(bVal || 0);
-        } else if (sortConfig.key === 'ticket_id') {
+        } else if (sortConfig.key === "ticket_id") {
           // Handle numeric sorting for ticket IDs
           aVal = parseInt(aVal) || 0;
           bVal = parseInt(bVal) || 0;
         } else {
           // Handle string sorting
-          aVal = aVal?.toString().toLowerCase() || '';
-          bVal = bVal?.toString().toLowerCase() || '';
+          aVal = aVal?.toString().toLowerCase() || "";
+          bVal = bVal?.toString().toLowerCase() || "";
         }
 
         let comparison = 0;
         if (aVal < bVal) comparison = -1;
         if (aVal > bVal) comparison = 1;
-        
-        return sortConfig.direction === 'asc' ? comparison : -comparison;
+
+        return sortConfig.direction === "asc" ? comparison : -comparison;
       });
     }
 
@@ -231,28 +234,11 @@ export default function MyTickets() {
     }
   };
 
-  const getPriorityColor = (priority) => {
-    const priorityLower = priority?.toLowerCase() || "";
-    switch (priorityLower) {
-      case "urgent":
-        return "bg-red-100 text-red-800";
-      case "high":
-        return "bg-orange-100 text-orange-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800";
-      case "low":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString("en-US", {
-        year: "numeric",
         month: "short",
         day: "numeric",
         hour: "2-digit",
@@ -265,15 +251,15 @@ export default function MyTickets() {
   };
 
   const getOpenTickets = () => {
-    return filteredTickets.filter(
-      (t) => t.status?.toLowerCase() === "open"
-    ).length;
+    return filteredTickets.filter((t) => t.status?.toLowerCase() === "open")
+      .length;
   };
 
   const getInProgressTickets = () => {
     return filteredTickets.filter(
-      (t) => t.status?.toLowerCase() === "working in progress" || 
-             t.status?.toLowerCase() === "in progress"
+      (t) =>
+        t.status?.toLowerCase() === "working in progress" ||
+        t.status?.toLowerCase() === "in progress"
     ).length;
   };
 
@@ -281,75 +267,93 @@ export default function MyTickets() {
   const pageCount = Math.max(1, Math.ceil(filteredTickets.length / pageSize));
 
   return (
-    <div className="flex w-full min-h-screen bg-gray-50">
+    <div className="flex w-full h-screen bg-gray-50 overflow-hidden">
       <Sidebar />
-      <main className="flex-1 min-w-0">
-        <div className="p-4 lg:p-6">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center border-b border-gray-200 pb-4 gap-4">
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col p-3 max-w-full">
+          {/* Compact Header */}
+          <div className="flex justify-between items-center border-b border-gray-200 pb-2 mb-2">
             <div>
-              <h3 className="text-xl font-semibold text-gray-800">
-                My Tickets
+              <h3 className="text-lg font-semibold text-gray-800">
+                Incidents Created by You
               </h3>
-              <p className="text-gray-600 mt-2">
-                Manage and track tickets created by you
-              </p>
             </div>
-            <div className="flex items-center gap-2 w-full lg:w-auto">
+            <div className="flex items-center gap-2">
               <button
-                className="px-3 py-1.5 bg-emerald-600 text-white text-sm font-medium rounded hover:bg-emerald-700 transition-colors whitespace-nowrap"
-                onClick={() =>
-                  (window.location.href =
-                    "/request-issue/")
-                }
+                className="px-3 py-1 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700 transition-colors"
+                onClick={() => (window.location.href = "/request-issue/")}
               >
                 New Ticket
               </button>
-              <div className="relative flex-1 lg:flex-none">
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="Search tickets..."
                   value={searchTerm}
                   onChange={handleSearchChange}
-                  className="pl-10 pr-4 py-2 rounded-lg border w-full lg:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="pl-8 pr-4 py-1.5 rounded border w-64 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
                 />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
                 {searchTerm && (
-                  <button
-                    onClick={clearSearch}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    ×
-                  </button>
+                  <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-500">
+                    {filteredTickets.length}
+                  </span>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-            <ul className="grid grid-cols-3 gap-4 text-gray-800 text-sm font-medium w-full lg:w-auto">
-              <li className="px-3 py-2 border rounded text-center shadow-sm bg-white">
-                {filteredTickets.length} Total
-              </li>
-              <li className="px-3 py-2 border rounded text-center shadow-sm bg-white">
-                {getOpenTickets()} Open
-              </li>
-              <li className="px-3 py-2 border rounded text-center shadow-sm bg-white">
-                {getInProgressTickets()} In Progress
-              </li>
-            </ul>
+          {/* Compact Stats Bar */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex gap-3 text-xs font-medium flex-wrap">
+              <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                Total: {filteredTickets.length}
+                {searchTerm && " (filtered)"}
+              </span>
+              <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                Open: {getOpenTickets()}
+              </span>
+              <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                In Progress: {getInProgressTickets()}
+              </span>
+              <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                Waiting for User:{" "}
+                {
+                  filteredTickets.filter(
+                    (t) =>
+                      t.status?.toLowerCase() === "waiting for user response"
+                  ).length
+                }
+              </span>
+              <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                Resolved:{" "}
+                {
+                  filteredTickets.filter(
+                    (t) => t.status?.toLowerCase() === "resolved"
+                  ).length
+                }
+              </span>
+              <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                Delegate:{" "}
+                {
+                  filteredTickets.filter(
+                    (t) => t.status?.toLowerCase() === "delegate"
+                  ).length
+                }
+              </span>
+            </div>
 
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-sm text-gray-600">
-                <Clock size={16} />
-                <span>Last updated: {lastUpdated}</span>
+              <div className="flex items-center gap-1 text-xs text-gray-600">
+                <Clock size={12} />
+                <span>{lastUpdated}</span>
               </div>
               <button
                 onClick={() => {
                   setCurrentPage(0);
-                  setSearchTerm("");
                   fetchAllTickets();
                 }}
-                className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-sm"
+                className="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs hover:bg-blue-100 transition-colors"
               >
                 Refresh
               </button>
@@ -357,96 +361,94 @@ export default function MyTickets() {
           </div>
 
           {loading ? (
-            <div className="text-center py-10 bg-white rounded-md shadow-sm mt-4 p-6">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading tickets...</p>
+            <div className="flex-1 flex items-center justify-center bg-white rounded border">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-600">Loading tickets...</p>
+              </div>
             </div>
           ) : error ? (
-            <div className="text-center py-10 bg-white rounded-md shadow-sm mt-4 p-6">
-              <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-              <p className="mt-4 text-red-500">{error}</p>
-              <button
-                onClick={fetchAllTickets}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Retry
-              </button>
+            <div className="flex-1 flex items-center justify-center bg-white rounded border">
+              <div className="text-center">
+                <AlertCircle className="h-8 w-8 text-red-500 mx-auto" />
+                <p className="mt-2 text-sm text-red-500">{error}</p>
+                <button
+                  onClick={fetchAllTickets}
+                  className="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                >
+                  Retry
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="mt-4 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+            <div className="flex flex-col bg-white border rounded overflow-hidden">
               {displayedTickets.length > 0 ? (
                 <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full divide-y divide-gray-200">
-                      <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="w-8 px-3 py-3">
-                            <input
-                              type="checkbox"
-                              className="rounded border-gray-300"
-                            />
-                          </th>
-                          <th className="w-8 px-3 py-3"></th>
+                  {/* Table with proper sizing - no flex-1 to prevent stretching */}
+                  <div className="overflow-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
                           <th
-                            className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-sm"
+                            className="px-2 py-2.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
                             onClick={() => requestSort("ticket_id")}
                           >
                             <div className="flex items-center gap-1">
-                              Number
+                              Incident ID
                               {sortConfig.key === "ticket_id" && (
-                                <span>
+                                <span className="text-xs">
                                   {sortConfig.direction === "asc" ? "▲" : "▼"}
                                 </span>
                               )}
                             </div>
                           </th>
                           <th
-                            className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-sm"
+                            className="px-2 py-2.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
                             onClick={() => requestSort("summary")}
                           >
                             <div className="flex items-center gap-1">
                               Summary
                               {sortConfig.key === "summary" && (
-                                <span>
+                                <span className="text-xs">
                                   {sortConfig.direction === "asc" ? "▲" : "▼"}
                                 </span>
                               )}
                             </div>
                           </th>
                           <th
-                            className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-sm"
+                            className="px-2 py-2.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
                             onClick={() => requestSort("status")}
                           >
                             <div className="flex items-center gap-1">
                               Status
                               {sortConfig.key === "status" && (
-                                <span>
+                                <span className="text-xs">
                                   {sortConfig.direction === "asc" ? "▲" : "▼"}
                                 </span>
                               )}
                             </div>
                           </th>
                           <th
-                            className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-sm"
+                            className="px-2 py-2.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
                             onClick={() => requestSort("priority")}
                           >
                             <div className="flex items-center gap-1">
                               Priority
                               {sortConfig.key === "priority" && (
-                                <span>
+                                <span className="text-xs">
                                   {sortConfig.direction === "asc" ? "▲" : "▼"}
                                 </span>
                               )}
                             </div>
                           </th>
                           <th
-                            className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-sm"
+                            className="px-2 py-2.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
                             onClick={() => requestSort("created_at")}
                           >
                             <div className="flex items-center gap-1">
                               Created
                               {sortConfig.key === "created_at" && (
-                                <span>
+                                <span className="text-xs">
                                   {sortConfig.direction === "asc" ? "▲" : "▼"}
                                 </span>
                               )}
@@ -459,50 +461,37 @@ export default function MyTickets() {
                           return (
                             <tr
                               key={ticket.ticket_id || index}
-                              className={`hover:bg-gray-50 cursor-pointer transition-colors ${
-                                index % 2 === 1 ? "bg-gray-50" : ""
+                              className={`hover:bg-gray-50 cursor-pointer transition-colors text-xs ${
+                                index % 2 === 1 ? "bg-gray-25" : ""
                               }`}
-                              onClick={() => handleTicketClick(ticket.ticket_id)}
+                              onClick={() =>
+                                handleTicketClick(ticket.ticket_id)
+                              }
                             >
-                              <td className="w-8 px-3 py-3">
-                                <input
-                                  type="checkbox"
-                                  className="rounded border-gray-300"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </td>
-                              <td className="w-8 px-3 py-3">
-                                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-blue-500">
-                                  <span className="text-xs">i</span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-sm font-medium text-blue-600">
+                              <td className="px-2 py-2 font-medium text-blue-600">
                                 {ticket.ticket_id || "N/A"}
                               </td>
-                              <td className="px-4 py-3 text-sm font-medium max-w-xs">
-                                <div className="truncate" title={ticket.summary}>
+                              <td className="px-2 py-2 font-medium max-w-xs">
+                                <div
+                                  className="truncate"
+                                  title={ticket.summary}
+                                >
                                   {ticket.summary || "N/A"}
                                 </div>
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-2 py-2">
                                 <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                                  className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(
                                     ticket.status
                                   )}`}
                                 >
                                   {ticket.status || "N/A"}
                                 </span>
                               </td>
-                              <td className="px-4 py-3">
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
-                                    ticket.priority
-                                  )}`}
-                                >
-                                  {ticket.priority || "N/A"}
-                                </span>
+                              <td className="px-2 py-2 font-medium">
+                                {ticket.priority || "N/A"}
                               </td>
-                              <td className="px-4 py-3 text-sm whitespace-nowrap">
+                              <td className="px-2 py-2">
                                 {formatDate(ticket.created_at)}
                               </td>
                             </tr>
@@ -512,68 +501,76 @@ export default function MyTickets() {
                     </table>
                   </div>
 
-                  <div className="flex flex-col md:flex-row justify-between items-center p-4 border-t border-gray-200 bg-gray-50 gap-4">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <label htmlFor="pageSize" className="mr-2 text-sm">
-                          Items per page:
-                        </label>
-                        <select
-                          id="pageSize"
-                          value={pageSize}
-                          onChange={handlePageSizeChange}
-                          className="border rounded-md p-1 text-sm"
-                        >
-                          <option value="2">2</option>
-                          <option value="5">5</option>
-                          <option value="10">10</option>
-                          <option value="25">25</option>
-                          <option value="50">50</option>
-                        </select>
-                      </div>
-                      {filteredTickets.length > 0 && (
-                        <span className="text-sm text-gray-600">
-                          Showing {currentEntries.start} to{" "}
-                          {currentEntries.end} of {filteredTickets.length} entries
-                          {searchTerm && (
-                            <span className="text-blue-600">
-                              {" "}(filtered from {allTickets.length} total)
-                            </span>
-                          )}
+                  {/* Pagination Footer - now directly follows table content */}
+                  {filteredTickets.length > 0 && (
+                    <div className="flex justify-between items-center p-2 border-t bg-gray-50 text-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <label htmlFor="pageSize">Per page:</label>
+                          <select
+                            id="pageSize"
+                            value={pageSize}
+                            onChange={handlePageSizeChange}
+                            className="border rounded px-1 py-0.5 text-xs"
+                          >
+                            <option value="2">2</option>
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                          </select>
+                        </div>
+                        <span>
+                          {filteredTickets.length <= pageSize
+                            ? `Showing all ${filteredTickets.length} ${
+                                filteredTickets.length === 1
+                                  ? "entry"
+                                  : "entries"
+                              }`
+                            : `${currentEntries.start}-${currentEntries.end} of ${filteredTickets.length}`}
                         </span>
+                      </div>
+
+                      {/* Only show pagination controls if there are multiple pages */}
+                      {pageCount > 1 && (
+                        <ReactPaginate
+                          previousLabel={<ChevronLeft size={12} />}
+                          nextLabel={<ChevronRight size={12} />}
+                          breakLabel={"..."}
+                          pageCount={pageCount}
+                          marginPagesDisplayed={1}
+                          pageRangeDisplayed={2}
+                          onPageChange={handlePageClick}
+                          forcePage={currentPage}
+                          containerClassName="flex space-x-1"
+                          pageClassName="px-2 py-1 border rounded bg-white cursor-pointer hover:bg-gray-100 text-xs"
+                          activeClassName="bg-blue-500 text-black border-blue-500"
+                          previousClassName="px-1 py-1 border rounded bg-white cursor-pointer hover:bg-gray-100"
+                          nextClassName="px-1 py-1 border rounded bg-white cursor-pointer hover:bg-gray-100"
+                          disabledClassName="opacity-50 cursor-not-allowed"
+                          breakClassName="px-2 py-1"
+                        />
                       )}
                     </div>
-
-                    <div className="flex items-center gap-1">
-                      <ReactPaginate
-                        previousLabel={
-                          <ChevronLeft size={16} className="text-gray-500" />
-                        }
-                        nextLabel={
-                          <ChevronRight size={16} className="text-gray-500" />
-                        }
-                        breakLabel={"..."}
-                        pageCount={pageCount}
-                        marginPagesDisplayed={2}
-                        pageRangeDisplayed={3}
-                        onPageChange={handlePageClick}
-                        forcePage={currentPage}
-                        containerClassName="flex space-x-1"
-                        pageClassName="p-1 border border-gray-300 rounded bg-white w-8 h-8 flex items-center justify-center cursor-pointer hover:bg-gray-100 text-sm"
-                        activeClassName="bg-blue-500 text-white border-blue-500 hover:bg-blue-600"
-                        previousClassName="p-1 border border-gray-300 rounded bg-white w-8 h-8 flex items-center justify-center cursor-pointer hover:bg-gray-100"
-                        nextClassName="p-1 border border-gray-300 rounded bg-white w-8 h-8 flex items-center justify-center cursor-pointer hover:bg-gray-100"
-                        disabledClassName="opacity-50 cursor-not-allowed"
-                        breakClassName="p-1 border border-gray-300 rounded bg-white w-8 h-8 flex items-center justify-center"
-                      />
-                    </div>
-                  </div>
+                  )}
                 </>
               ) : (
-                <div className="text-center py-10 text-gray-500">
-                  {searchTerm
-                    ? `No tickets match your search criteria "${searchTerm}"`
-                    : "No tickets found"}
+                <div className="flex items-center justify-center text-gray-500 text-sm p-8">
+                  {searchTerm ? (
+                    <div className="text-center">
+                      <p>No tickets match "{searchTerm}"</p>
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className="mt-1 text-blue-600 hover:text-blue-800 text-xs underline"
+                      >
+                        Clear search
+                      </button>
+                    </div>
+                  ) : (
+                    "No tickets found"
+                  )}
                 </div>
               )}
             </div>

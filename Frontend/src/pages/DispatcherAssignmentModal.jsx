@@ -20,11 +20,12 @@ export default function DispatcherAssignmentModal({
   const [dataLoading, setDataLoading] = useState(false);
 
   const userProfile = useSelector((state) => state.userProfile.user);
-  let adminorg= userProfile?.organisation_name;
+  console.log("User Profile:", userProfile);
+  let adminorg = userProfile?.organisation_name;
+  let adminorgId = userProfile?.organisation_id;
 
   const accessToken = localStorage.getItem("access_token");
 
-  
   const flattenEmployees = (data, parentInfo = null) => {
     let result = [];
 
@@ -71,30 +72,34 @@ export default function DispatcherAssignmentModal({
         axiosInstance.get("/user/api/assignee/", {
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
-        axiosInstance.get("/org/employee/",{
-          headers:{Authorization:`Bearer ${accessToken}`}
+        axiosInstance.get(`/org/organisation/${adminorgId}/employee/`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
         }),
         axiosInstance.get("/solution_grp/create/", {
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
       ]);
-const flatEmployeeData = flattenEmployees(staffDet.data);
+      const flatEmployeeData = flattenEmployees(staffDet.data);
 
-const orgMap = new Map(
-  flatEmployeeData.map(user => [user.username?.trim().toLowerCase(), user.organisation_name])
-);
+      const orgMap = new Map(
+        flatEmployeeData.map((user) => [
+          user.username?.trim().toLowerCase(),
+          user.organisation_name,
+        ])
+      );
 
-const enrichedSupportStaff = (staffRes.data || []).map(user => ({
-  ...user,
-  organisation_name: orgMap.get(user.username?.trim().toLowerCase()) || "Unknown"
-}));
+      const enrichedSupportStaff = (staffRes.data || []).map((user) => ({
+        ...user,
+        organisation_name:
+          orgMap.get(user.username?.trim().toLowerCase()) || "Unknown",
+      }));
 
-const filteredSupportStaff = enrichedSupportStaff.filter(
-  (user) => user.organisation_name === adminorg
-);
+      const filteredSupportStaff = enrichedSupportStaff.filter(
+        (user) => user.organisation_name === adminorg
+      );
 
-setSupportStaff(filteredSupportStaff);
-console.log("Filtered Support Staff:", filteredSupportStaff); 
+      setSupportStaff(filteredSupportStaff);
+      console.log("Filtered Support Staff:", filteredSupportStaff);
 
       // Handle solution groups data structure
       if (Array.isArray(solutionsRes.data)) {
@@ -143,80 +148,82 @@ console.log("Filtered Support Staff:", filteredSupportStaff);
     }));
   };
 
-const handleAssignTicket = async (e) => {
-  e.preventDefault();
-  
-  if (!accessToken) {
-    toast.error("Authentication required");
-    return;
-  }
+  const handleAssignTicket = async (e) => {
+    e.preventDefault();
 
-  if (!assignmentData.assigneeId) {
-    toast.error("Please select an assignee");
-    return;
-  }
+    if (!accessToken) {
+      toast.error("Authentication required");
+      return;
+    }
 
-  if (!assignmentData.solutionGroupId) {
-    toast.error("Please select a solution group");
-    return;
-  }
+    if (!assignmentData.assigneeId) {
+      toast.error("Please select an assignee");
+      return;
+    }
 
-  setAssignLoading(true);
+    if (!assignmentData.solutionGroupId) {
+      toast.error("Please select a solution group");
+      return;
+    }
 
-  try {
-    // Find selected staff member for organization info
-    const selectedStaff = supportStaff.find(
-      (staff) =>
-        staff.id?.toString() === assignmentData.assigneeId ||
-        staff.employee_id?.toString() === assignmentData.assigneeId
-    );
+    setAssignLoading(true);
 
-    const requestData = {
-      ticket_id: ticket.ticket_id,
-      developer_organization: selectedStaff?.organisation_name || "",
-      is_active: true,
-      assignee: assignmentData.assigneeId,
-      solution_grp: assignmentData.solutionGroupId,
-    };
-
-    await axiosInstance.put(`/ticket/dispatcher/`, requestData, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    // ADD THIS: History entry for dispatcher assignment
     try {
-      await axiosInstance.post(
-        'ticket/history/',
-        {
-          title: `Ticket assigned by dispatcher to ${selectedStaff?.username || selectedStaff?.name || 'assignee'}`,
-          ticket: ticket.ticket_id
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
+      // Find selected staff member for organization info
+      const selectedStaff = supportStaff.find(
+        (staff) =>
+          staff.id?.toString() === assignmentData.assigneeId ||
+          staff.employee_id?.toString() === assignmentData.assigneeId
       );
-    } catch (historyError) {
-      console.error("Error adding history entry:", historyError);
-    }
 
-    toast.success(`Ticket #${ticket.ticket_id} assigned successfully`);
-            
-    if (onAssignmentSuccess) {
-      onAssignmentSuccess();
-    }
+      const requestData = {
+        ticket_id: ticket.ticket_id,
+        developer_organization: selectedStaff?.organisation_name || "",
+        is_active: true,
+        assignee: assignmentData.assigneeId,
+        solution_grp: assignmentData.solutionGroupId,
+      };
 
-    onClose();
-  } catch (error) {
-    console.error("Assignment error:", error);
-    toast.error("Failed to assign ticket");
-  } finally {
-    setAssignLoading(false);
-  }
-};
+      await axiosInstance.put(`/ticket/dispatcher/`, requestData, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      // ADD THIS: History entry for dispatcher assignment
+      try {
+        await axiosInstance.post(
+          "ticket/history/",
+          {
+            title: `Ticket assigned by dispatcher to ${
+              selectedStaff?.username || selectedStaff?.name || "assignee"
+            }`,
+            ticket: ticket.ticket_id,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+      } catch (historyError) {
+        console.error("Error adding history entry:", historyError);
+      }
+
+      toast.success(`Ticket #${ticket.ticket_id} assigned successfully`);
+
+      if (onAssignmentSuccess) {
+        onAssignmentSuccess();
+      }
+
+      onClose();
+    } catch (error) {
+      console.error("Assignment error:", error);
+      toast.error("Failed to assign ticket");
+    } finally {
+      setAssignLoading(false);
+    }
+  };
   const getPriorityColor = (priority) => {
     if (!priority) return "text-gray-600 bg-gray-100";
     const p = priority.toLowerCase();

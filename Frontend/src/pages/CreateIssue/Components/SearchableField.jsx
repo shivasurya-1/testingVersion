@@ -98,7 +98,7 @@ const SearchableField = ({
           onChange={handleInputChange}
           onFocus={handleFocus}
           placeholder={placeholder}
-          className="px-2 py-1 flex-grow focus:outline-none"
+          className="px-2 py-[2.5px] flex-grow focus:outline-none"
         />
         <div
           onClick={() => {

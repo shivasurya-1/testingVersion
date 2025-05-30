@@ -143,96 +143,83 @@ class autoAssigneeAPIView(APIView):
         return Response({"error": "Invalid request."}, status=status.HTTP_400_BAD_REQUEST)
     
 
-# class EmployeeAPI(APIView):
-#     permission_classes = [IsAuthenticated]
-#     authentication_classes = [JWTAuthentication]
 
-#     def get(self, request, organisation_id=None, employee_id=None):
-#         # self.permission_required = "view_employee"  
-#         # HasRolePermission.has_permission(self,request,self.permission_required)
-#         """Handles fetching employees for a specific organisation or a single employee"""
-#         self.permission_required = "view_employee"
-#         if not HasRolePermission().has_permission(request, self.permission_required):
-#             return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
-#         organisation_id = request.user.organisation
-#         if organisation_id:
-#             employees = Employee.objects.filter(organisation_id=organisation_id)
-#             serializer = EmployeeSerializer(employees, many=True)
-#             return Response(serializer.data, status=status.HTTP_200_OK)
-
-#         elif employee_id:
-#             try:
-#                 employee = Employee.objects.get(id=employee_id)
-#                 serializer = EmployeeSerializer(employee)
-#                 return Response(serializer.data, status=status.HTTP_200_OK)
-#             except Employee.DoesNotExist:
-#                 return Response({"error": "Employee not found."}, status=status.HTTP_404_NOT_FOUND)
-
-#         return Response({"error": "Invalid request."}, status=status.HTTP_400_BAD_REQUEST)
-    
-
-#     def post(self, request, organisation_id=None):
-#         self.permission_required = "create_employee"  
-#         HasRolePermission.has_permission(self,request,self.permission_required) 
-#         """
-#         Create an employee. If `organisation_id` is provided in the URL,
-#         it will automatically associate the employee with that organisation.
-#         """
-#         if organisation_id:
-#             # Attach organisation ID from URL if provided
-#             request.data["organisation"] = organisation_id
-
-#         serializer = EmployeeSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save(created_by=request.user)
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     def put(self, request, employee_id):
-#         self.permission_required = "update_employee"  
-#         HasRolePermission.has_permission(self,request,self.permission_required) 
-#         employee = get_object_or_404(Employee, id=employee_id)
-#         serializer = EmployeeSerializer(employee, data=request.data, partial=True)
-#         if serializer.is_valid():
-#             serializer.save(created_by=request.user, modified_by=request.data)
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     def delete(self, request, employee_id):
-#         self.permission_required = "delete_employee"  
-#         HasRolePermission.has_permission(self,request,self.permission_required)
-#         employee = get_object_or_404(Employee, id=employee_id)
-#         employee.delete()
-#         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
+from roles_creation.models import UserRole
 
 class EmployeeAPI(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
  
+    
     def get(self, request, organisation_id=None, employee_id=None):
         self.permission_required = "view_employee"
+ 
         if not HasRolePermission.has_permission(self, request, self.permission_required):
             return Response({"error": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
-        organisation_id = request.user.organisation
  
-        if organisation_id:
-            # Only fetch top-level employees
-            top_level_employees = Employee.objects.filter(organisation_id=organisation_id, parent=None)
-            serializer = EmployeeSerializer(top_level_employees, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        user = request.user
  
-        elif employee_id:
+        # Get all roles
+        user_roles = UserRole.objects.filter(user=user)
+        if not user_roles.exists():
+            return Response({"error": "UserRole not found."}, status=status.HTTP_403_FORBIDDEN)
+ 
+        user_role = user_roles.first()  # use first role if multiple
+ 
+        # Is user a superadmin?
+        is_superadmin = getattr(user, 'is_superadmin', False)
+ 
+        # Try to get current employee's org (if not superadmin)
+        current_org_id = None
+        if not is_superadmin:
             try:
-                employee = Employee.objects.get(id=employee_id)
+                current_employee = Employee.objects.get(user_role=user_role)
+                current_org_id = current_employee.organisation_id
+            except Employee.DoesNotExist:
+                return Response({"error": "Employee record not found for this user."}, status=status.HTTP_403_FORBIDDEN)
+ 
+        print(f"User: {user.username}, SuperAdmin: {is_superadmin}")
+        print(f"Requested Org ID: {organisation_id}, Requested Employee ID: {employee_id}")
+ 
+        # Case: Get single employee
+        if employee_id:
+            try:
+                employee = Employee.objects.get(employee_id=employee_id)
+                if not is_superadmin and employee.organisation_id != current_org_id:
+                    return Response({"error": "Access denied to this employee."}, status=status.HTTP_403_FORBIDDEN)
                 serializer = EmployeeSerializer(employee)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except Employee.DoesNotExist:
                 return Response({"error": "Employee not found."}, status=status.HTTP_404_NOT_FOUND)
  
-        return Response({"error": "Invalid request."}, status=status.HTTP_400_BAD_REQUEST)
+        # Tree building helper function
+        def build_tree(data, parent_id=None):
+            tree = []
+            for item in data:
+                if item['parent'] == parent_id:
+                    children = build_tree(data, item['employee_id'])
+                    if children:
+                        item['children'] = children
+                    tree.append(item)
+            return tree
+ 
+        # Case: SuperAdmin gets all employees
+        if is_superadmin and not organisation_id:
+            employees = Employee.objects.all()
+            serializer = EmployeeSerializer(employees, many=True)
+            tree_data = build_tree(serializer.data)
+            return Response(tree_data, status=status.HTTP_200_OK)
+ 
+        # Case: Normal user (or superadmin) requesting employees from specific organisation
+        org_id_to_use = organisation_id or current_org_id
+        if not is_superadmin and org_id_to_use != current_org_id:
+            return Response({"error": "Access denied to this organisation."}, status=status.HTTP_403_FORBIDDEN)
+ 
+        employees = Employee.objects.filter(organisation_id=org_id_to_use)
+        serializer = EmployeeSerializer(employees, many=True)
+        tree_data = build_tree(serializer.data)
+        return Response(tree_data, status=status.HTTP_200_OK)
+ 
  
  
    
@@ -281,6 +268,26 @@ class EmployeeAPI(APIView):
         employee = get_object_or_404(Employee, id=employee_id)
         employee.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+from .utils import get_all_organisation_hierarchies
+class SuperAdminHierarchyView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+   
+ 
+    def get(self, request):
+        user = request.user
+ 
+        # Check if user is superadmin (customize this check)
+        if not user.is_superuser:
+            return Response(
+                {"detail": "You do not have permission to perform this action."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+ 
+        data = get_all_organisation_hierarchies()
+        return Response(data)
  
  
  

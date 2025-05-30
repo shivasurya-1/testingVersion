@@ -29,44 +29,7 @@ class OrganisationSerializer(serializers.ModelSerializer):
         ]
 
       
-# class EmployeeSerializer(serializers.ModelSerializer): 
-#     parent = serializers.SerializerMethodField()
-#     user_role = serializers.PrimaryKeyRelatedField(queryset=UserRole.objects.all())
-#     organisation = serializers.PrimaryKeyRelatedField(queryset=Organisation.objects.all())
-#     parent = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), required=False)
-#     level = serializers.IntegerField()
-#     organisation_name = serializers.SerializerMethodField(read_only=True)
-#     username = serializers.SerializerMethodField(read_only=True)
-#     children = serializers.SerializerMethodField()
-#     class Meta:
-#         model = Employee
-#         fields = ['employee_id','username', 'organisation_name','user_role', 'organisation', 'position_name', 'level', 'parent', 'created_at', 'modified_at','created_by','modified_by','children']
-#         extra_kwargs = {
-#             'created_by': {'read_only': True},  
-#             'modified_by': {'read_only': True},
-#         }
 
-#     def validate(self, data):
-#         """
-#         Add custom validation here, if necessary.
-#         """
-#         if 'parent' in data and data['parent'] == data.get('user_role'):
-#             raise serializers.ValidationError("An employee cannot be their own parent.")
-#         return data
-#     def get_organisation_name(self, obj):
-#         return obj.organisation.organisation_name if obj.organisation else None
-    
-#     def get_username(self, obj):
-#         return obj.user_role.user.username if obj.user_role and obj.user_role.user else None
-    
-#     def get_parent(self, obj):
-#         return obj.parent.employee_id if obj.parent else 0
-    
-   
-
-#     def get_children(self, obj):
-#         children = Employee.objects.filter(parent=obj)
-#         return EmployeeSerializer(children, many=True).data
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
@@ -104,13 +67,13 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return obj.parent.employee_id if obj.parent else 0
  
     def get_children(self, obj):
-        children = Employee.objects.filter(parent=obj)
-        if children.exists():
-            return EmployeeSerializer(children, many=True).data
-        return []
- 
- 
-class AssigneeSerializer(serializers.ModelSerializer): 
+        # Filter children by same organisation to avoid leakage
+        children = obj.children.filter(organisation=obj.organisation)
+        serializer = EmployeeSerializer(children, many=True)
+        return serializer.data
+
+
+class AssigneeSerializer(serializers.ModelSerializer):
     organisation_name = serializers.SerializerMethodField(read_only=True)
     username = serializers.SerializerMethodField(read_only=True)
     solutiongroup = serializers.SerializerMethodField(read_only=True)

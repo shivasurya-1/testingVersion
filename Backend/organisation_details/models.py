@@ -62,6 +62,12 @@ class Employee(MPTTModel):
     class Meta:
         unique_together = ('user_role', 'organisation')
 
+
+    def clean(self):
+        if self.parent and self.parent.organisation != self.organisation:
+            raise ValidationError("Parent must be from the same organisation.")
+ 
+
     def clean(self):
         """ Validates Employee constraints before saving. """
         if self.pk is None and Employee.objects.filter(user_role=self.user_role, organisation=self.organisation).exists():

@@ -1,0 +1,299 @@
+/* QuillTextEditor.css */
+
+/* Main container styles */
+.quill-editor-wrapper {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.quill-editor-container {
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.quill-editor-container.focused {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+.quill-editor-container.error-state {
+  border-color: #f87171;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.2);
+}
+
+/* Quill container */
+.quill-container {
+  height: 250px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Remove default Quill borders */
+.quill-editor-container .ql-container {
+  border: none !important;
+  height: auto;
+  min-height: 100px;
+  max-height: 300px;
+  overflow: visible;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.quill-editor-container .ql-toolbar {
+  border: none !important;
+  border-bottom: 1px solid #f3f3f3 !important;
+  display: flex;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Editor content area - Critical text breaking styles */
+.quill-editor-container .ql-editor {
+  min-height: 150px;
+  max-height: 220px;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  border: none !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  
+  /* Force text wrapping for all scenarios */
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-all !important; /* This breaks even continuous characters */
+  white-space: normal !important;
+  hyphens: auto !important;
+}
+
+/* Ensure all text elements respect container boundaries */
+.quill-editor-container .ql-editor *,
+.quill-editor-container .ql-editor p,
+.quill-editor-container .ql-editor div,
+.quill-editor-container .ql-editor span,
+.quill-editor-container .ql-editor h1,
+.quill-editor-container .ql-editor h2,
+.quill-editor-container .ql-editor h3,
+.quill-editor-container .ql-editor h4,
+.quill-editor-container .ql-editor h5,
+.quill-editor-container .ql-editor h6,
+.quill-editor-container .ql-editor li,
+.quill-editor-container .ql-editor blockquote {
+  max-width: 100% !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-all !important; /* Breaks long continuous text like HHHHHH... */
+  box-sizing: border-box !important;
+  white-space: normal !important;
+  hyphens: auto !important;
+}
+
+/* Special handling for very long continuous text */
+.quill-editor-container .ql-editor p:has-text,
+.quill-editor-container .ql-editor div:has-text {
+  word-break: break-all !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Links should also break */
+.quill-editor-container .ql-editor a {
+  word-break: break-all !important;
+  overflow-wrap: break-word !important;
+}
+
+/* Lists and their items */
+.quill-editor-container .ql-editor ol,
+.quill-editor-container .ql-editor ul {
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.quill-editor-container .ql-editor ol li,
+.quill-editor-container .ql-editor ul li {
+  max-width: 100% !important;
+  word-break: break-all !important;
+  overflow-wrap: break-word !important;
+}
+
+/* Blockquotes */
+.quill-editor-container .ql-editor blockquote {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  word-break: break-all !important;
+  border-left: 4px solid #e2e8f0;
+  padding-left: 16px;
+  margin: 16px 0;
+  font-style: italic;
+}
+
+/* Image handling */
+.quill-editor-container .ql-editor img {
+  max-width: 100% !important;
+  width: auto !important;
+  height: auto !important;
+  display: block !important;
+  margin: 10px 0 !important;
+  pointer-events: auto !important;
+  word-wrap: normal !important;
+  overflow-wrap: normal !important;
+  box-sizing: border-box !important;
+  border-radius: 4px;
+}
+
+.quill-editor-container .ql-editor img[src*="data:image"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Toolbar styling */
+.quill-editor-container .ql-toolbar button {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.quill-editor-container .ql-toolbar button:hover {
+  background-color: #f3f3f3;
+}
+
+.quill-editor-container .ql-toolbar button.ql-active {
+  background-color: #e0e7ff;
+  color: #3b82f6;
+}
+
+.quill-editor-container .ql-formats {
+  margin-right: 10px;
+  margin-bottom: 4px;
+}
+
+/* Dropdown styling */
+.quill-editor-container .ql-toolbar .ql-picker {
+  color: #374151;
+}
+
+.quill-editor-container .ql-toolbar .ql-picker-options {
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.quill-editor-container .ql-toolbar .ql-picker-item:hover {
+  background-color: #f9fafb;
+}
+
+/* Color picker styling */
+.quill-editor-container .ql-toolbar .ql-color-picker .ql-picker-options {
+  padding: 8px;
+  width: 200px;
+}
+
+/* Error and helper text */
+.error-message {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.helper-text {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* Prevent horizontal scrolling */
+.quill-container,
+.quill-editor-container .ql-container,
+.quill-editor-container .ql-editor {
+  overflow-x: hidden !important;
+}
+
+/* Focus ring for accessibility */
+.quill-editor-container:focus-within {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+/* Handle very long URLs and text in any context */
+.quill-editor-container .ql-editor * {
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .quill-editor-container .ql-toolbar {
+    padding: 4px 0;
+  }
+  
+  .quill-editor-container .ql-toolbar button {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .quill-editor-container .ql-formats {
+    margin-right: 6px;
+    margin-bottom: 2px;
+  }
+  
+  .quill-container {
+    height: 200px;
+  }
+  
+  .quill-editor-container .ql-editor {
+    min-height: 120px;
+    max-height: 180px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .quill-editor-container .ql-toolbar {
+    display: none !important;
+  }
+  
+  .quill-editor-container .ql-editor {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .quill-editor-container {
+    border-color: #000;
+  }
+  
+  .quill-editor-container.focused {
+    border-color: #0066cc;
+  }
+  
+  .quill-editor-container .ql-toolbar {
+    border-bottom-color: #000 !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .quill-editor-container {
+    transition: none;
+  }
+  
+  .quill-editor-container .ql-toolbar button {
+    transition: none;
+  }
+}

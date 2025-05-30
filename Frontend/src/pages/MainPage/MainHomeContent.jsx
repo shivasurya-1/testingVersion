@@ -12,7 +12,6 @@ const MainHomeContent = () => {
 
   const handleServiceRequestClick = () => {
     setShowServiceMessage(true);
-    // Auto-hide the message after 3 seconds
     setTimeout(() => {
       setShowServiceMessage(false);
     }, 3000);
@@ -20,22 +19,17 @@ const MainHomeContent = () => {
 
   const handleKnowledgeBaseClick = () => {
     setShowKbMessage(true);
-    // Auto-hide the message after 3 seconds
     setTimeout(() => {
       setShowKbMessage(false);
     }, 3000);
   };
 
   return (
-    <div className="bg-slate-50 text-gray-800 w-full min-h-screen flex flex-col">
+    <div className="bg-slate-50 text-gray-800 w-full flex flex-col">
       <div className="container mx-auto px-4 py-8 sm:py-12">
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 sm:mb-8 text-center text-blue-900 tracking-tight">
           How may we assist you?
         </h2>
-
-        {/* <div className="max-w-3xl mx-auto w-full">
-          <SearchBar />
-        </div> */}
 
         <div className="mt-12 sm:mt-16 lg:mt-20 max-w-6xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
@@ -60,7 +54,6 @@ const MainHomeContent = () => {
                 <Clock className="w-4 h-4 text-blue-700" />
               </div>
               
-              {/* Coming soon message that appears on click */}
               {showServiceMessage && (
                 <div className="absolute inset-0 flex items-center justify-center animate-fade-in">
                   <div className="bg-blue-900 text-white py-3 px-6 rounded-lg shadow-lg flex items-center">
@@ -84,7 +77,6 @@ const MainHomeContent = () => {
                 <Clock className="w-4 h-4 text-blue-700" />
               </div>
               
-              {/* Work in progress message that appears on click */}
               {showKbMessage && (
                 <div className="absolute inset-0 flex items-center justify-center animate-fade-in">
                   <div className="bg-blue-900 text-white py-3 px-6 rounded-lg shadow-lg flex items-center">

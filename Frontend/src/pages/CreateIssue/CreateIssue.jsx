@@ -18,6 +18,22 @@ import {
 } from "../../store/Slices/serviceDomainSlice";
 import { format } from "libphonenumber-js";
 import Select from "react-select";
+import { use } from "react";
+import AssigneeSearchableField from "./Components/AssigneeSearchableField";
+import {
+  Building2,
+  Settings,
+  User,
+  Users,
+  UserCheck,
+  Headphones,
+  FileText,
+  MessageSquare,
+  AlertTriangle,
+  Flag,
+  FolderOpen,
+  UserCog,
+} from "lucide-react";
 
 export default function CreateIssue() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -49,8 +65,8 @@ export default function CreateIssue() {
   const [attachments, setAttachments] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
 
-const [assignedProjects, setAssignedProjects] = useState([]);
-const [requestorList, setRequestorList] = useState([]);
+  const [assignedProjects, setAssignedProjects] = useState([]);
+  const [requestorList, setRequestorList] = useState([]);
 
   const [usersListWithOrganisations, setUsersListWithOrganisations] = useState(
     []
@@ -107,6 +123,8 @@ const [requestorList, setRequestorList] = useState([]);
   const [priorityList, setPriorityList] = useState([]);
   const [projectList, setProjectList] = useState([]);
   const [newNote, setNewNote] = useState("");
+  const [roleBasedAssignee, setRoleBasedAssignee] = useState([]);
+
   const [resolutionCodes, setResolutionCodes] = useState([
     { id: 1, name: "Fixed" },
     { id: 2, name: "Workaround Provided" },
@@ -140,7 +158,7 @@ const [requestorList, setRequestorList] = useState([]);
 
       setTicketDetails(response.data);
     } catch (error) {
-      console.error("Error fetching ticket details:", error);
+      console.error("Error fetching Incident details:", error);
       // toast.error("Failed to load ticket details");
     } finally {
       setDetailsLoading(false);
@@ -292,7 +310,7 @@ const [requestorList, setRequestorList] = useState([]);
       );
       setTicketNotes(filteredNotes);
     } catch (error) {
-      console.error("Error fetching ticket notes:", error);
+      console.error("Error fetching Incident notes:", error);
       // toast.error("Failed to load ticket notes");
     } finally {
       setNotesLoading(false);
@@ -489,6 +507,167 @@ const [requestorList, setRequestorList] = useState([]);
     }
   }, [activeServiceDomain, activeServiceType]);
 
+  const fetchTicketId = async () => {
+    const accessToken = localStorage.getItem("access_token");
+
+    const authHeaders = {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    };
+    try {
+      const response = await axiosInstance.get("ticket/getId/", authHeaders);
+
+      const ticketNumber = response.data;
+
+      // FIXED: Set defaults after all data is loaded, with proper state update
+      setFormData((prev) => {
+        const updatedData = {
+          ...prev,
+          number: ticketNumber,
+          search: `Issue - ${ticketNumber}`,
+        };
+
+        return updatedData;
+      });
+    } catch (error) {
+      console.error("Error fetching Incident ID:", error);
+      toast.error("Failed to fetch Incident ID. Please try again.");
+    }
+  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    console.log("Form data before validation:", formData); // Debug log
+
+    if (!validateForm()) {
+      console.log("Validation failed:", formErrors); // Debug log
+      return;
+    }
+
+    setIsLoading(true);
+    const accessToken = localStorage.getItem("access_token");
+
+    try {
+      const response = await axiosInstance.post(
+        "/ticket/create/",
+        convertFormDataToSnakeCase(formData),
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      const ticketId = response.data.ticket_id;
+
+      // Add history entries
+      const addHistoryEntry = async (title, ticketId) => {
+        try {
+          await axiosInstance.post(
+            "ticket/history/",
+            { title: title, ticket: ticketId },
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+        } catch (error) {
+          console.error("Error adding history entry:", error);
+        }
+      };
+
+      await addHistoryEntry("Incident created", ticketId);
+
+      if (formData.assignee && formData.assignee.trim() !== "") {
+        await addHistoryEntry(
+          `Incident directly assigned to ${formData.assignee}`,
+          ticketId
+        );
+      } else {
+        await addHistoryEntry(
+          "Incident sent to dispatcher for assignment",
+          ticketId
+        );
+      }
+
+      toast.success(`Incident ${ticketId} raised successfully`);
+      fetchTicketId();
+
+      // FIXED: Reset form with proper default values maintained
+      setFormData((prev) => {
+        const resetData = {
+          ...prev,
+          number: "",
+          requestor: userProfile?.username || "",
+          customerCountry: "india",
+          supportOrgName: "",
+          assignee: "",
+          solutionGroup: "",
+          referenceTicket: [],
+          description: "",
+          summary: "",
+          supportTeam: "",
+          project: "",
+          product: "",
+          email: userProfile?.email || "",
+          developerOrganization: "",
+          contactNumber: "",
+          contactMode: "",
+          search: "",
+          ticketOrganisation: userProfile?.organisation_name || "",
+        };
+
+        // Maintain the default Low priority and impact after reset
+        if (priorityList.length > 0) {
+          const priorityLowChoice = priorityList.find(
+            (choice) => choice.urgency_name.toLowerCase() === "low"
+          );
+          if (priorityLowChoice) {
+            resetData.priority = priorityLowChoice.priority_id;
+          } else {
+            resetData.priority = priorityList[0].priority_id;
+          }
+        }
+
+        if (impactList.length > 0) {
+          const impactLowChoice = impactList.find(
+            (choice) => choice[1].toLowerCase() === "low"
+          );
+          if (impactLowChoice) {
+            resetData.impact = impactLowChoice[0];
+          } else {
+            resetData.impact = impactList[0][0];
+          }
+        }
+
+        return resetData;
+      });
+
+      setAttachments([]);
+      setNewMessage("");
+      setExpandEditor(false);
+      setFormErrors({});
+    } catch (error) {
+      console.log("Incident Not Creating", error);
+      if (error.response && error.response.data) {
+        const errors = error.response.data;
+        for (const [field, message] of Object.entries(errors)) {
+          if (field === "summary") {
+            toast.error("Summary should not contain more than 250 characters.");
+          } else {
+            toast.error(`${field}: ${message}`);
+          }
+        }
+      } else {
+        toast.error("Network or server error.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 1. Fix the useEffect that sets default values
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -509,8 +688,9 @@ const [requestorList, setRequestorList] = useState([]);
           activeUsersList,
           priorityList,
           nextTicketId,
-         assignedProjectsResponse,
+          assignedProjectsResponse,
           usersListWithOrganisations,
+          userRole,
         ] = await Promise.all([
           axiosInstance.get("solution_grp/create/", authHeaders),
           axiosInstance.get("org/organisation/", authHeaders),
@@ -520,56 +700,72 @@ const [requestorList, setRequestorList] = useState([]);
           axiosInstance.get("ticket/getId/", authHeaders),
           axiosInstance.get("ticket/create/", authHeaders),
           axiosInstance.get("org/autoAssignee/", authHeaders),
+          axiosInstance.get("roles/user_role/", authHeaders),
         ]);
-       console.log(activeUsersList)
+        console.log("userRole", userRole.data);
+
         setSolutionGroupList(subGroupsList.data);
         setOrganizationsList(orgList.data);
-        setActiveUsersList(activeUsersList.data);
+        setRoleBasedAssignee(userRole.data);
         setSupportTeamList(choicesList.data.support_team_choices);
         setImpactList(choicesList.data.impact_choices);
         setContactModeList(choicesList.data.contact_mode_choices);
         setPriorityList(priorityList.data);
         setUsersListWithOrganisations(usersListWithOrganisations.data);
 
-        console.log(activeUsersList);
+        setRequestorList(activeUsersList.data.map((user) => user.username));
 
+        console.log("userRole", roleBasedAssignee);
 
-
-     setRequestorList(activeUsersList.data.map((user) => user.username));
-        // Set Low priority as default
-        if (priorityList.data) {
-          const priorityMinorChoice = priorityList.data.find(
-            (choice) => choice.urgency_name === "Low"
-          );
-          if (priorityMinorChoice) {
-            setFormData((prev) => ({
-              ...prev,
-              priority: priorityMinorChoice.priority_id,
-            }));
-          }
+        if (
+          assignedProjectsResponse.data &&
+          assignedProjectsResponse.data.assigned_projects
+        ) {
+          setAssignedProjects(assignedProjectsResponse.data.assigned_projects);
         }
-        // Set Low impact as default
-        if (choicesList.data.impact_choices) {
-          const impactLowChoiceArray = choicesList.data.impact_choices.filter(
-            (choice) => choice[1] === "Low"
-          );
-          if (impactLowChoiceArray) {
-            setFormData((prev) => ({
-              ...prev,
-              impact: impactLowChoiceArray[0][0],
-            }));
-          }
-        }
-if (assignedProjectsResponse.data && assignedProjectsResponse.data.assigned_projects) {
-  setAssignedProjects(assignedProjectsResponse.data.assigned_projects);
-}
-   
+
         const ticketNumber = nextTicketId.data;
-        setFormData((prev) => ({
-          ...prev,
-          number: ticketNumber,
-          search: `Issue - ${ticketNumber}`,
-        }));
+
+        // FIXED: Set defaults after all data is loaded, with proper state update
+        setFormData((prev) => {
+          const updatedData = {
+            ...prev,
+            number: ticketNumber,
+            search: `Issue - ${ticketNumber}`,
+          };
+
+          // Set Low priority as default - FIX: Check array length first
+          if (priorityList.data && priorityList.data.length > 0) {
+            const priorityLowChoice = priorityList.data.find(
+              (choice) => choice.urgency_name.toLowerCase() === "low"
+            );
+            console.log("choice", priorityLowChoice);
+            if (priorityLowChoice) {
+              updatedData.priority = priorityLowChoice.priority_id;
+            } else {
+              // Fallback to first priority if "Low" not found
+              updatedData.priority = priorityList.data[0].priority_id;
+            }
+          }
+
+          // Set Low impact as default - FIX: Check array structure
+          if (
+            choicesList.data.impact_choices &&
+            choicesList.data.impact_choices.length > 0
+          ) {
+            const impactLowChoice = choicesList.data.impact_choices.find(
+              (choice) => choice[1].toLowerCase() === "low"
+            );
+            if (impactLowChoice) {
+              updatedData.impact = impactLowChoice[0];
+            } else {
+              // Fallback to first impact if "Low" not found
+              updatedData.impact = choicesList.data.impact_choices[0][0];
+            }
+          }
+
+          return updatedData;
+        });
 
         // Initialize activity log
         setActivityLog([
@@ -593,7 +789,6 @@ if (assignedProjectsResponse.data && assignedProjectsResponse.data.assigned_proj
         fetchTicketDetails(ticketNumber);
       } catch (error) {
         console.error("Error fetching APIs:", error);
-        // toast.error("Failed to load form data.");
       }
     };
     fetchData();
@@ -602,7 +797,6 @@ if (assignedProjectsResponse.data && assignedProjectsResponse.data.assigned_proj
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   console.log(organizationsList, "organizationsList");
-
 
   const handleChange = useCallback(
     (e) => {
@@ -627,26 +821,33 @@ if (assignedProjectsResponse.data && assignedProjectsResponse.data.assigned_proj
 
         const updatedData = { ...prev, [name]: sanitizedValue };
 
-   
-if (name === "project") {
-  const selectedProject = assignedProjects.find((p) => p.project_id.toString() === value);
-  if (selectedProject) {
-    updatedData.product = selectedProject.product_mail || "";
-    updatedData.project_id = selectedProject.project_id;
-  }
-}
-        // Auto assignee-organization connection
-        if (name === "assignee" && activeUsersList.length) {
-          const selectedStaff = activeUsersList.find(
-            (staff) => staff.username?.toString() === value
+        if (name === "project") {
+          const selectedProject = assignedProjects.find(
+            (p) => p.project_id.toString() === value
           );
-
-          if (selectedStaff) {
-            const staffOrg = usersListWithOrganisations.find(
-              (org) => org.username === selectedStaff.username
+          if (selectedProject) {
+            updatedData.product = selectedProject.product_mail || "";
+            updatedData.project_id = selectedProject.project_id;
+          }
+        }
+        // Auto assignee-organization connection
+        if (name === "assignee") {
+          if (value === "") {
+            updatedData.developerOrganization = "";
+          } else {
+            const selectedUser = roleBasedAssignee.find(
+              (user) =>
+                user.user === value && user.role.toLowerCase() === "developer"
             );
-            if (staffOrg) {
-              updatedData.developerOrganization = staffOrg.organisation_name;
+
+            if (selectedUser) {
+              const orgDetails = usersListWithOrganisations.find(
+                (org) => org.username === selectedUser.user
+              );
+              updatedData.developerOrganization =
+                orgDetails?.organisation_name || "";
+            } else {
+              updatedData.developerOrganization = "";
             }
           }
         }
@@ -655,7 +856,7 @@ if (name === "project") {
 
       setFormErrors((prev) => ({ ...prev, [name]: "" }));
     },
-    [activeUsersList, usersListWithOrganisations]
+    [roleBasedAssignee, usersListWithOrganisations]
   ); // Add dependencies
 
   const convertFormDataToSnakeCase = (data) => {
@@ -680,7 +881,7 @@ if (name === "project") {
       reference_tickets: data.referenceTicket,
       impact: data.impact,
       support_team: data.supportTeam,
-    project: data.project_id || data.project,
+      project: data.project_id || data.project,
       product: data.product,
       customer_country: data.customerCountry,
       developer_organization: data.developerOrganization,
@@ -697,34 +898,42 @@ if (name === "project") {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
+
+    setFormData((prevData) => {
+      const updatedData = { ...prevData, [name]: value };
+
+      // Auto-populate product when project is selected
+      if (name === "project") {
+        const selectedProject = assignedProjects.find(
+          (p) => p.project_id.toString() === value
+        );
+        if (selectedProject) {
+          updatedData.product = selectedProject.product_mail || "";
+          updatedData.project_id = selectedProject.project_id;
+        }
+      }
+
+      return updatedData;
     });
 
     // Clear error for this field
     if (formErrors[name]) {
-      setFormErrors({
-        ...formErrors,
+      setFormErrors((prevErrors) => ({
+        ...prevErrors,
         [name]: "",
-      });
+      }));
     }
-    //     }))
-    //   }
-    // }
-
-    // Auto-populate product when project is selected
- if (name === "project") {
-  const selectedProject = assignedProjects.find((p) => p.project_id.toString() === value);
-  if (selectedProject) {
-    setFormData((prev) => ({
-      ...prev,
-      product: selectedProject.product_mail || "",
-      project_id: selectedProject.project_id,
-    }));
-  }
-}
   };
+
+  const assigneeOptions = [
+    { label: "-- Select --", value: "" },
+    ...roleBasedAssignee
+      .filter((user) => user.role.toLowerCase() === "developer") // Fix case sensitivity
+      .map((user) => ({
+        label: user.user,
+        value: user.user,
+      })),
+  ];
 
   const [relatedRecords, setRelatedRecords] = useState([
     {
@@ -749,119 +958,30 @@ if (name === "project") {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.requestor.trim()) newErrors.title = "Requestor is required";
-    if (!formData.priority) newErrors.priority = "Priority is required";
-    if (!formData.impact) newErrors.impact = "Impact is required";
-    if (!formData.summary.trim()) newErrors.summary = "Summary is required";
-    if (!formData.description.trim())
+
+    if (!formData.requestor || !formData.requestor.trim()) {
+      newErrors.requestor = "Requestor is required";
+    }
+
+    if (!formData.priority || formData.priority === "") {
+      newErrors.priority = "Priority is required";
+    }
+
+    if (!formData.impact || formData.impact === "") {
+      newErrors.impact = "Impact is required";
+    }
+
+    if (!formData.summary || !formData.summary.trim()) {
+      newErrors.summary = "Summary is required";
+    }
+
+    if (!formData.description || !formData.description.trim()) {
       newErrors.description = "Description is required";
+    }
+
     setFormErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!validateForm()) {
-    return;
-  }
-
-  setIsLoading(true);
-  const accessToken = localStorage.getItem("access_token");
-  console.log("formData Submit Page", formData);
-  
-  try {
-    const response = await axiosInstance.post(
-      "/ticket/create/",
-      convertFormDataToSnakeCase(formData),
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    console.log("Converted Form Data", convertFormDataToSnakeCase(formData));
-    const ticketId = response.data.ticket_id;
-
-    // ADD THIS: Helper function for adding history entries
-    const addHistoryEntry = async (title, ticketId) => {
-      try {
-        await axiosInstance.post(
-          'ticket/history/',
-          { title: title, ticket: ticketId },
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
-      } catch (error) {
-        console.error("Error adding history entry:", error);
-      }
-    };
-
-    // ADD THIS: Add creation history
-    await addHistoryEntry("Ticket created", ticketId);
-
-    // ADD THIS: Check if ticket was directly assigned or sent to dispatcher
-    if (formData.assignee && formData.assignee.trim() !== "") {
-      // Directly assigned case
-      await addHistoryEntry(`Ticket directly assigned to ${formData.assignee}`, ticketId);
-    } else {
-      // Sent to dispatcher case (when no assignee is selected)
-      await addHistoryEntry("Ticket sent to dispatcher for assignment", ticketId);
-    }
-
-    toast.success(`Ticket ${ticketId} raised successfully`);
-    
-    // Reset form (your existing reset logic)
-    setFormData((prev) => ({
-      ...prev,
-      number: "",
-      requestor: userProfile?.username || "",
-      customerCountry: "india",
-      supportOrgName: "",
-      assignee: "",
-      solutionGroup: "",
-      referenceTicket: [],
-      description: "",
-      summary: "",
-      impact: "",
-      supportTeam: "",
-      project: "",
-      product: "",
-      priority: "",
-      email: userProfile?.email || "",
-      developerOrganization: "",
-      contactNumber: "",
-      contactMode: "",
-      search: "",
-    }));
-
-    setAttachments([]);
-    setNewMessage("");
-    setExpandEditor(false);
-    setFormErrors({});
-    
-  } catch (error) {
-    console.log("Ticket Not Creating", error);
-    if (error.response && error.response.data) {
-      const errors = error.response.data;
-      for (const [field, message] of Object.entries(errors)) {
-        if (field === "summary") {
-          toast.error("Summary should not contain more than 250 characters.");
-        } else {
-          toast.error(`${field}: ${message}`);
-        }
-      }
-    } else {
-      toast.error("Network or server error.");
-    }
-  } finally {
-    setIsLoading(false);
-  }
-};
 
   const getFilteredHistory = () => {
     let filtered = [...historyData];
@@ -948,7 +1068,7 @@ const handleSubmit = async (e) => {
             </button>
             <span className="px-2">≡</span>
             <div>
-              <div className="font-bold">Raise an Issue</div>
+              <div className="font-bold">Report an Incident</div>
             </div>
           </div>
 
@@ -969,35 +1089,21 @@ const handleSubmit = async (e) => {
             {/* Left Column */}
             <div className="space-y-2">
               <div className="flex items-center ">
-                <label className="w-44 text-gray-600 text-right pr-2">
-                  Service Domain
+                <label className="w-44 text-gray-600 pr-2 flex items-center gap-2">
+                  <FileText size={16} className="text-gray-500" />
+                  Incident Number
                 </label>
                 <div>
-                  <label className="w-44 text-gray-600">:</label>
                   <input
                     // type="text"
-                    name="serviceDomain"
-                    value={formData.serviceDomainObj?.title || ""}
+                    name="number"
+                    value={formData.number || ""}
                     readOnly
-                    className={`px-2 py-1 w-64 cursor-not-allowed outline-none `}
+                    className={`bg-gray-100 border px-2 py-[2.5px] w-64 cursor-not-allowed outline-none `}
                   />
                 </div>
               </div>
-              <div className="flex items-center">
-                <label className="w-44 text-gray-600 text-right pr-2">
-                  Service Type
-                </label>
-                <div>
-                  <label className="w-44 text-gray-600">:</label>
-                  <input
-                    type="text"
-                    name="serviceType"
-                    value={formData.serviceTypeObj?.title || ""}
-                    readOnly
-                    className={`px-2 py-1 w-64 cursor-not-allowed outline-none  `}
-                  />
-                </div>
-              </div>
+
               {/* <div className="flex items-center">
                 <label className="w-44 text-gray-600">
                   {formData.requestor === userProfile?.username
@@ -1021,7 +1127,8 @@ const handleSubmit = async (e) => {
               </div> */}
               <div className="flex flex-col space-y-1">
                 <div className="flex items-center">
-                  <label className="w-44 text-gray-600 text-right pr-2">
+                  <label className="w-44 text-gray-600 text-right pr-2 flex items-center  gap-2">
+                    <User size={16} className="text-gray-500" />
                     {formData.requestor === userProfile?.username
                       ? "Requestor"
                       : "On Behalf"}
@@ -1045,7 +1152,8 @@ const handleSubmit = async (e) => {
                 )}
               </div>
               <div className="flex items-center">
-                <label className="w-44 text-gray-600 text-right pr-2">
+                <label className="w-44 text-gray-600 text-right pr-2 flex items-center  gap-2">
+                  <Users size={16} className="text-gray-500" />
                   Solution Group
                 </label>
                 <select
@@ -1054,7 +1162,7 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   onFocus={() => handleFocus("solutionGroup")}
                   onBlur={handleBlur}
-                  className={`border  px-2 py-1 w-64 outline-none rounded-none appearance-none ${
+                  className={`border  px-2 py-[2.5px] w-64 outline-none rounded-none appearance-none ${
                     focusedField === "solutionGroup"
                       ? "ring-2 ring-blue-100 border-blue-600"
                       : "border-gray-300"
@@ -1068,71 +1176,40 @@ const handleSubmit = async (e) => {
                   ))}
                 </select>
               </div>
-
-              <div className="flex items-center">
-                <label className="w-44 text-gray-600 text-right pr-2">
-                  Assignee
-                </label>
-                <div className="w-64">
-                  {/* <select
-                    name="assignmentType"
-                    value={formData.assignmentType}
-                    onFocus={() => handleFocus("assignmentType")}
-                    onBlur={handleBlur}
-                    onChange={(e) => {
-                      const newType = e.target.value;
-                      setFormData({
-                        ...formData,
-                        assignmentType: newType,
-                        assignee:
-                          newType === "automatic" ? "" : formData.assignee,
-                        solutionGroup:
-                          newType === "automatic" ? "" : formData.solutionGroup,
-                        supportTeam:
-                          newType === "automatic" ? "" : formData.supportTeam,
-                        developerOrganization:
-                          newType === "automatic"
-                            ? ""
-                            : formData.developerOrganization,
-                      });
-                    }}
-                    className={`border  px-2 py-1 w-full mb-2 outline-none ${
-                      focusedField === "assignmentType"
-                        ? "ring-2 ring-blue-100 border-blue-600"
-                        : "border-gray-300"
-                    }`}
-                  >
-                    <option value="automatic">Automatic Assignment</option>
-                    <option value="manual">Manual Assignment</option>
-                  </select> */}
-
-                  {/* {formData.assignmentType === "manual" && ( */}
-                  <SearchableField
-                    name="assignee"
-                    value={formData.assignee}
-                    onChange={handleChange}
-                    options={activeUsersList.map((user) => user.username)}
-                    placeholder="Search assignee..."
-                    error={formErrors.assignee}
+              <div className="flex item-center">
+                <div className="flex items-center">
+                  <label className="w-44 text-gray-600 text-right pr-2 flex items-center  gap-2">
+                    <UserCheck size={16} className="text-gray-500" />
+                    Assignee
+                  </label>
+                  <div className="w-64">
+                    <AssigneeSearchableField
+                      name="assignee"
+                      value={formData.assignee}
+                      onChange={handleChange}
+                      options={assigneeOptions}
+                      placeholder="Search assignee..."
+                      error={formErrors.assignee}
+                    />
+                  </div>
+                </div>
+                <div>
+                  {/* <label className="w-44 text-gray-600 text-right pr-2">
+                      Support Vendor
+                    </label> */}
+                  <input
+                    type="text"
+                    name="Organization"
+                    value={formData.developerOrganization}
+                    readOnly
+                    className={`px-2 py-[2.5px] outline-none  `}
                   />
-                  {/* )} */}
                 </div>
               </div>
+
               {/* {formData.assignmentType === "manual" && (
                 <> */}
 
-              <div className="flex items-center">
-                <label className="w-44 text-gray-600 text-right pr-2">
-                  Support Vendor
-                </label>
-                <input
-                  type="text"
-                  name="Organization"
-                  value={formData.developerOrganization}
-                  readOnly
-                  className={`bg-gray-100 border  px-2 py-1 w-64 cursor-not-allowed outline-none  `}
-                />
-              </div>
               {/* </>
               )} */}
 
@@ -1189,18 +1266,49 @@ const handleSubmit = async (e) => {
                   ))}
                 </select>
               </div> */}
+              <div className="flex items-center ">
+                <label className="w-44 text-gray-600 pr-2 flex items-center gap-2">
+                  <Building2 size={16} className="text-gray-500" />
+                  Service Domain
+                </label>
+                <div>
+                  <input
+                    // type="text"
+                    name="serviceDomain"
+                    value={formData.serviceDomainObj?.title || ""}
+                    readOnly
+                    className={`bg-gray-100 border px-2 py-[2.5px] w-64 cursor-not-allowed outline-none `}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center">
+                <label className="w-44 text-gray-600 text-right pr-2 flex items-center  gap-2">
+                  <Settings size={16} className="text-gray-500" />
+                  Service Type
+                </label>
+                <div>
+                  <input
+                    type="text"
+                    name="serviceType"
+                    value={formData.serviceTypeObj?.title || ""}
+                    readOnly
+                    className={`border bg-gray-100 px-2 py-[2.5px] w-64 cursor-not-allowed outline-none  `}
+                  />
+                </div>
+              </div>
               <div className="flex flex-col space-y-1">
                 <div className="flex items-center">
-                  <label className="w-44 text-gray-600 text-right pr-2">
+                  <label className="w-44 text-gray-600 text-right pr-2 flex items-center  gap-2">
+                    <AlertTriangle size={16} className="text-gray-500" />
                     Impact <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="impact"
                     value={formData.impact}
-                    onChange={handleChange}
+                    onChange={handleInputChange}
                     onFocus={() => handleFocus("impact")}
                     onBlur={handleBlur}
-                    className={`border  px-2 py-1 w-64 outline-none ${
+                    className={`border  px-2 py-[2.5px] w-64 outline-none ${
                       focusedField === "impact"
                         ? "ring-2 ring-blue-100 border-blue-600"
                         : "border-gray-300"
@@ -1221,16 +1329,17 @@ const handleSubmit = async (e) => {
               </div>
               <div className="flex flex-col space-y-1">
                 <div className="flex items-center">
-                  <label className="w-44 text-gray-600 text-right pr-2">
+                  <label className="w-44 text-gray-600 text-right pr-2 flex items-center  gap-2">
+                    <Flag size={16} className="text-gray-500" />
                     Priority <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="priority"
                     value={formData.priority}
-                    onChange={handleChange}
+                    onChange={handleInputChange}
                     onFocus={() => handleFocus("priority")}
                     onBlur={handleBlur}
-                    className={`border  px-2 py-1 w-64 outline-none ${
+                    className={`border  px-2 py-[2.5px] w-64 outline-none ${
                       focusedField === "priority"
                         ? "ring-2 ring-blue-100 border-blue-600"
                         : "border-gray-300"
@@ -1279,7 +1388,7 @@ const handleSubmit = async (e) => {
                   ))}
                 </select>
               </div> */}
-             <div className="flex items-center">
+              {/* <div className="flex items-center">
   <label className="w-44 text-gray-600 text-right pr-2">
     Project
   </label>
@@ -1302,8 +1411,8 @@ const handleSubmit = async (e) => {
       </option>
     ))}
   </select>
-</div>
-              <div className="flex items-center">
+</div> */}
+              {/* <div className="flex items-center">
                 <label className="w-44 text-gray-600 text-right pr-2">
                   Project Owner
                 </label>
@@ -1314,7 +1423,7 @@ const handleSubmit = async (e) => {
                   readOnly
                   className={`bg-gray-100 border  px-2 py-1 w-64 cursor-not-allowed outline-none  `}
                 />
-              </div>
+              </div> */}
               {/* <div className="flex items-center">
                 <label className="w-44 text-gray-600">Reference Ticket</label>
                 <div className="w-64">
@@ -1330,37 +1439,11 @@ const handleSubmit = async (e) => {
           </div>
 
           <div className="mt-4 space-y-2">
-            {/* <div className="">
-              <div className="flex items-center">
-
-              
-              <label className="w-44 text-gray-600">
-                Summary <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="summary"
-                value={formData.summary}
-                onChange={handleChange}
-                onFocus={() => handleFocus("summary")}
-                onBlur={handleBlur}
-                className={`border w-[71.6%]  px-2 py-1 outline-none ${
-                  focusedField === "summary"
-                    ? "ring-2 ring-blue-100 border-blue-600"
-                    : "border-gray-300"
-                }`}
-              />
-              </div>
-              <div>
-                {formErrors.summary && (
-                  <p className="text-red-500 text-sm">{formErrors.summary}</p>
-                )}
-              </div>
-            </div> */}
             <div className="flex items-start flex-col w-full space-y-1">
               <div className="flex w-full items-center">
-                <label className="w-44 text-gray-600 text-right pr-2">
-                  Summary <span className="text-red-500">*</span>
+                <label className="w-44 text-gray-600 text-right pr-2 flex items-center  gap-2">
+                  <FileText size={16} className="text-gray-500" />
+                  Incident Summary <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1369,12 +1452,18 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   onFocus={() => handleFocus("summary")}
                   onBlur={handleBlur}
-                  className={`border w-[71.6%]  px-2 py-1 outline-none ${
+                  maxLength={120}
+                  className={`border w-[71.6%] px-2 py-[2.5px] outline-none ${
                     focusedField === "summary"
                       ? "ring-2 ring-blue-100 border-blue-600"
                       : "border-gray-300"
                   }`}
                 />
+              </div>
+              <div className="ml-44">
+                <p className="text-gray-500 text-xs">
+                  {formData.summary?.length || 0}/120 characters
+                </p>
               </div>
               {formErrors.summary && (
                 <p className="text-red-500 text-xs ml-44">
@@ -1383,25 +1472,14 @@ const handleSubmit = async (e) => {
               )}
             </div>
 
-            <div className="flex flex-col mt-4 space-y-1">
-              <div className="flex items-start">
-                <label className="w-44 text-gray-600 text-right pr-2">
+            <div className="flex flex-col space-y-1">
+              <div className="flex items-start mt-2">
+                <label className="w-44 text-gray-600 text-sm pr-2 flex items-center gap-2 mt-1">
+                  <MessageSquare size={16} className="text-gray-500" />
                   Describe Your Issue <span className="text-red-500">*</span>
                 </label>
-                <div className="w-[71.6%]">
-                  {!expandEditor ? (
-                    <input
-                      type="text"
-                      name="description"
-                      value={formData.description}
-                      onFocus={() => {
-                        setExpandEditor(true);
-                      }}
-                      onChange={handleChange}
-                      className="border w-full px-2 py-1 outline-none"
-                      placeholder="Describe your issue here..."
-                    />
-                  ) : (
+                <div className="flex items-start gap-3 w-[71.6%]">
+                  <div className="flex-1">
                     <QuillTextEditor
                       name="description"
                       value={formData.description}
@@ -1413,26 +1491,22 @@ const handleSubmit = async (e) => {
                       }}
                       onFocus={() => handleFocus("description")}
                       onBlur={handleBlur}
-                      className="bg-white"
+                      className="bg-white max-w-full"
                     />
-                  )}
+                  </div>
                 </div>
               </div>
-              {formErrors.description && (
-                <p className="text-red-500 text-xs ml-44">
-                  {formErrors.description}
-                </p>
-              )}
-            </div>
 
-            <div className="flex items-center">
-              <button
-                onClick={handleFileAttachment}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 border border-blue-300 -lg hover:bg-blue-200 transition-all"
-              >
-                <Paperclip size={16} />
-                <span>Attach files</span>
-              </button>
+              {formErrors.description && (
+                <div className="flex items-start">
+                  <div className="w-44"></div>
+                  {/* Spacer to match label width */}
+                  <p className="text-red-500 text-xs">
+                    {formErrors.description}
+                  </p>
+                </div>
+              )}
+
               <input
                 type="file"
                 ref={fileInputRef}
@@ -1440,9 +1514,28 @@ const handleSubmit = async (e) => {
                 className="hidden"
                 multiple
               />
+            </div>
+
+            <div className="flex flex-col space-y-3">
+              <div className="flex items-center">
+                <button
+                  onClick={handleFileAttachment}
+                  className="flex items-center gap-2 ml-44 px-2 py-[2.5px] bg-blue-100 text-blue-700 border border-blue-300 hover:bg-blue-200 transition-all whitespace-nowrap"
+                >
+                  <Paperclip size={16} />
+                  <span>Attach</span>
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  multiple
+                />
+              </div>
 
               {attachments.length > 0 && (
-                <div className="mt-3 space-y-2">
+                <div className="ml-44 space-y-2 w-[71.6%]">
                   <div className="text-sm font-semibold text-gray-700">
                     Attached Files:
                   </div>
@@ -1450,14 +1543,14 @@ const handleSubmit = async (e) => {
                     {attachments.map((file) => (
                       <li
                         key={file.id}
-                        className="flex items-center justify-between bg-white shadow-sm border px-3 py-1 -md"
+                        className="flex items-center justify-between bg-white shadow-sm border px-3 py-1 rounded-md"
                       >
                         <div className="flex items-center gap-2">
                           {file.type.includes("image") ? (
                             <img
                               src={file.previewUrl}
                               alt={file.name}
-                              className="w-6 h-6 object-cover "
+                              className="w-6 h-6 object-cover rounded"
                             />
                           ) : (
                             <Paperclip size={16} className="text-gray-500" />
@@ -1487,7 +1580,7 @@ const handleSubmit = async (e) => {
                             className="text-sm text-left truncate max-w-xs text-blue-600 hover:underline"
                             title="Click to preview"
                           >
-                            {file.name}
+                            Preview
                           </button>
                         </div>
                       </li>
@@ -1495,13 +1588,14 @@ const handleSubmit = async (e) => {
                   </ul>
                 </div>
               )}
+
               {previewFile && (
                 <div
                   className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
                   onClick={() => setPreviewFile(null)}
                 >
                   <div
-                    className="bg-white p-4  shadow-lg max-w-2xl w-full max-h-[90vh] overflow-auto"
+                    className="bg-white p-4 rounded shadow-lg max-w-2xl w-full max-h-[90vh] overflow-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex justify-between items-center mb-4">

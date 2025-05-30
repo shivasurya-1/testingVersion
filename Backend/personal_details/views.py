@@ -51,6 +51,7 @@ class UserProfileView(APIView):
                         "username": request.user.username,
                         "email": request.user.email,
                         "organisation_name": request.user.organisation.organisation_name if request.user.organisation else None,
+                        "organisation_id": request.user.organisation.organisation_id if request.user.organisation else None,
                         "role": request.user.user_roles.filter(is_active=True).first().role.name if request.user.user_roles.filter(is_active=True).exists() else None,
                         "employee_id": employee_id,
                         "assigned_projects": [

@@ -246,16 +246,13 @@ export default function AssignedToMe() {
           <div className="flex justify-between items-center border-b border-gray-200 pb-2 mb-2">
             <div>
               <h3 className="text-lg font-semibold text-gray-800">
-                Tickets Assigned To Me
+                Incidents Assigned To Me
               </h3>
             </div>
             <div className="flex items-center gap-2">
               <button
                 className="px-3 py-1 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700 transition-colors"
-                onClick={() =>
-                  (window.location.href =
-                    "/request-issue/")
-                }
+                onClick={() => (window.location.href = "/request-issue/")}
               >
                 New Ticket
               </button>
@@ -279,17 +276,45 @@ export default function AssignedToMe() {
 
           {/* Compact Stats Bar */}
           <div className="flex items-center justify-between mb-2">
-            <div className="flex gap-3 text-xs font-medium">
-              <span className="px-2 py-1 bg-white border rounded shadow-sm">
-                Total: {totalEntries}
-                {searchTerm && " (filtered)"}
-              </span>
-              <span className="px-2 py-1 bg-white border rounded shadow-sm">
-                Open: {getOpenTickets()}
-              </span>
-              <span className="px-2 py-1 bg-white border rounded shadow-sm">
-                In Progress: {getInProgressTickets()}
-              </span>
+            {/* Compact Stats Bar */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex gap-3 text-xs font-medium flex-wrap">
+                <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                  Total: {totalEntries}
+                  {searchTerm && " (filtered)"}
+                </span>
+                <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                  Open: {getOpenTickets()}
+                </span>
+                <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                  In Progress: {getInProgressTickets()}
+                </span>
+                <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                  Waiting for User:{" "}
+                  {
+                    filteredTickets.filter(
+                      (t) =>
+                        t.status?.toLowerCase() === "waiting for user response"
+                    ).length
+                  }
+                </span>
+                <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                  Resolved:{" "}
+                  {
+                    filteredTickets.filter(
+                      (t) => t.status?.toLowerCase() === "resolved"
+                    ).length
+                  }
+                </span>
+                <span className="px-2 py-1 bg-white border rounded shadow-sm min-w-[80px] text-center">
+                  Delegate:{" "}
+                  {
+                    filteredTickets.filter(
+                      (t) => t.status?.toLowerCase() === "delegate"
+                    ).length
+                  }
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -338,13 +363,12 @@ export default function AssignedToMe() {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50 sticky top-0">
                         <tr>
-                          <th className="w-4 px-2 py-1.5"></th>
                           <th
-                            className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
+                            className="px-2 py-2.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
                             onClick={() => requestSort("ticket_id")}
                           >
                             <div className="flex items-center gap-1">
-                              ID
+                              Incident ID
                               {sortConfig.key === "ticket_id" && (
                                 <span className="text-xs">
                                   {sortConfig.direction === "asc" ? "▲" : "▼"}
@@ -353,7 +377,7 @@ export default function AssignedToMe() {
                             </div>
                           </th>
                           <th
-                            className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
+                            className="px-2 py-2.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
                             onClick={() => requestSort("summary")}
                           >
                             <div className="flex items-center gap-1">
@@ -366,7 +390,7 @@ export default function AssignedToMe() {
                             </div>
                           </th>
                           <th
-                            className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
+                            className="px-2 py-2.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
                             onClick={() => requestSort("status")}
                           >
                             <div className="flex items-center gap-1">
@@ -379,7 +403,7 @@ export default function AssignedToMe() {
                             </div>
                           </th>
                           <th
-                            className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
+                            className="px-2 py-2.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
                             onClick={() => requestSort("priority")}
                           >
                             <div className="flex items-center gap-1">
@@ -392,7 +416,7 @@ export default function AssignedToMe() {
                             </div>
                           </th>
                           <th
-                            className="px-2 py-1.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
+                            className="px-2 py-2.5 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 text-xs"
                             onClick={() => requestSort("created_at")}
                           >
                             <div className="flex items-center gap-1">
@@ -415,32 +439,27 @@ export default function AssignedToMe() {
                             }`}
                             onClick={() => handleTicketClick(ticket.ticket_id)}
                           >
-                            <td className="w-4 px-2 py-1.5">
-                              <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center text-blue-500">
-                                <span className="text-xs">i</span>
-                              </div>
-                            </td>
-                            <td className="px-2 py-1.5 font-medium text-blue-600">
+                            <td className="px-2 py-2 font-medium text-blue-600">
                               {ticket.ticket_id || "N/A"}
                             </td>
-                            <td className="px-2 py-1.5 font-medium max-w-xs">
+                            <td className="px-2 py-2 font-medium max-w-xs">
                               <div className="truncate" title={ticket.summary}>
                                 {ticket.summary || "N/A"}
                               </div>
                             </td>
-                            <td className="px-2 py-1.5">
+                            <td className="px-2 py-2">
                               <span
-                                className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                                className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(
                                   ticket.status
                                 )}`}
                               >
                                 {ticket.status || "N/A"}
                               </span>
                             </td>
-                            <td className="px-2 py-1.5 font-medium">
+                            <td className="px-2 py-2 font-medium">
                               {ticket.priority || "N/A"}
                             </td>
-                            <td className="px-2 py-1.5">
+                            <td className="px-2 py-2">
                               {formatDate(ticket.created_at)}
                             </td>
                           </tr>
